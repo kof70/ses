@@ -2,6 +2,56 @@
 
 Une application mobile complète développée avec React Native (Expo) pour la gestion et le suivi des agents de sécurité.
 
+## 📱 Installation Rapide
+
+### Prérequis
+- Node.js 18+ installé
+- Un smartphone (iOS ou Android)
+- Compte Expo (gratuit) - [Créer un compte](https://expo.dev/signup)
+
+### Étapes d'installation
+
+1. **Installer Expo CLI globalement**
+```bash
+npm install -g @expo/cli
+```
+
+2. **Se connecter à Expo**
+```bash
+expo login
+```
+
+3. **Configurer Supabase**
+   - Créez un projet sur [Supabase](https://supabase.com)
+   - Copiez `.env.example` vers `.env`
+   - Remplissez vos clés Supabase dans `.env`
+
+4. **Installer les dépendances**
+```bash
+npm install
+```
+
+5. **Lancer l'application**
+```bash
+npm start
+```
+
+6. **Tester sur votre téléphone**
+   - Installez l'app "Expo Go" sur votre téléphone
+   - Scannez le QR code affiché dans le terminal
+
+### Alternative: Build de développement
+
+Pour une expérience plus native, créez un build de développement :
+
+```bash
+# Pour Android
+eas build --profile development --platform android
+
+# Pour iOS (nécessite un compte Apple Developer)
+eas build --profile development --platform ios
+```
+
 ## 🚀 Fonctionnalités
 
 ### 👮‍♂️ Agent de Sécurité
