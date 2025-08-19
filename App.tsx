@@ -1,5 +1,5 @@
-import 'react-native-url-polyfill/auto';
 import './global.css';
+import 'react-native-url-polyfill/auto';
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
