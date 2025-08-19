@@ -3,31 +3,40 @@
     "name": "SecureGuard Pro",
     "slug": "secureguard-pro",
     "version": "1.0.0",
+    "platform": "ios",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "splash": {
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#1e3a8a"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.secureguard.pro"
+      "bundleIdentifier": "com.secureguard.pro",
+      "buildNumber": "1.0.0"
     },
     "android": {
       "package": "com.secureguard.pro",
+      "versionCode": 1,
       "permissions": [
         "CAMERA",
         "NOTIFICATIONS",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "VIBRATE"
       ]
     },
     "web": {
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router",
       [
         "expo-notifications",
         {
@@ -41,6 +50,13 @@
         }
       ]
     ],
-    "scheme": "secureguard"
+    "scheme": "secureguard",
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
+    },
+    "owner": "your-expo-username",
+    "runtimeVersion": "1.0.0"
   }
 }
