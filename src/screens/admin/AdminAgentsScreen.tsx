@@ -29,7 +29,8 @@ export default function AdminAgentsScreen() {
             id,
             nom,
             email,
-            statut
+            statut,
+            role
           )
         `)
         .order('created_at', { ascending: false });
@@ -72,35 +73,60 @@ export default function AdminAgentsScreen() {
     fetchAgents();
   };
 
-  const toggleAgentStatus = async (agentId: string, currentStatus: string) => {
+  const toggleAgentStatus = async (agentUserId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'actif' ? 'inactif' : 'actif';
-    
     Alert.alert(
       'Modifier le statut',
-      `Êtes-vous sûr de vouloir ${newStatus === 'actif' ? 'activer' : 'désactiver'} cet agent ?`,
+      `Êtes-vous sûr de vouloir ${newStatus === 'actif' ? 'activer' : 'désactiver'} ce compte ?`,
       [
         { text: 'Annuler', style: 'cancel' },
-        { text: 'Confirmer', onPress: () => updateAgentStatus(agentId, newStatus) },
+        { text: 'Confirmer', onPress: () => updateUserStatus(agentUserId, newStatus) },
       ]
     );
   };
 
-  const updateAgentStatus = async (agentId: string, newStatus: string) => {
+  const updateUserStatus = async (userId: string, newStatus: string) => {
     try {
       const { error } = await supabase
         .from('users')
         .update({ statut: newStatus })
-        .eq('id', agentId);
+        .eq('id', userId);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
-      Alert.alert('Succès', `Statut de l'agent mis à jour`);
+      Alert.alert('Succès', `Statut du compte mis à jour`);
       fetchAgents();
     } catch (error) {
-      console.error('Error updating agent status:', error);
-      Alert.alert('Erreur', 'Impossible de mettre à jour le statut');
+      console.error('Error updating user status:', error);
+      Alert.alert('Erreur', "Impossible de mettre à jour le statut");
+    }
+  };
+
+  const promoteToAdmin = async (userId: string) => {
+    try {
+      // add to admins bypass table if exists
+      await supabase.from('admins').insert({ user_id: userId }).catch(() => {});
+      // update role
+      const { error } = await supabase.from('users').update({ role: 'admin' }).eq('id', userId);
+      if (error) throw error;
+      Alert.alert('Succès', "L'utilisateur est maintenant administrateur");
+      fetchAgents();
+    } catch (error) {
+      console.error('Error promoting to admin:', error);
+      Alert.alert('Erreur', "Promotion impossible");
+    }
+  };
+
+  const revokeAdmin = async (userId: string) => {
+    try {
+      await supabase.from('admins').delete().eq('user_id', userId).catch(() => {});
+      const { error } = await supabase.from('users').update({ role: 'agent' }).eq('id', userId);
+      if (error) throw error;
+      Alert.alert('Succès', "Droits administrateur retirés");
+      fetchAgents();
+    } catch (error) {
+      console.error('Error revoking admin:', error);
+      Alert.alert('Erreur', "Révocation impossible");
     }
   };
 
@@ -136,12 +162,8 @@ export default function AdminAgentsScreen() {
 
   const formatTime = (dateString: string | null) => {
     if (!dateString) return 'Non enregistré';
-    
     const date = new Date(dateString);
-    return date.toLocaleTimeString('fr-FR', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   };
 
   if (loading) {
@@ -166,17 +188,13 @@ export default function AdminAgentsScreen() {
 
       <ScrollView
         className="flex-1"
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         <View className="px-6 py-6">
           {agents.length === 0 ? (
             <View className="bg-white rounded-xl p-8 items-center shadow-sm">
               <Ionicons name="people-outline" size={64} color="#9ca3af" />
-              <Text className="text-gray-500 text-xl font-medium mt-4">
-                Aucun agent
-              </Text>
+              <Text className="text-gray-500 text-xl font-medium mt-4">Aucun agent</Text>
               <Text className="text-gray-400 text-center mt-2">
                 Aucun agent de sécurité n'est encore enregistré dans le système
               </Text>
@@ -187,27 +205,21 @@ export default function AdminAgentsScreen() {
                 <View key={agent.id} className="bg-white rounded-xl p-6 shadow-sm">
                   <View className="flex-row items-start justify-between mb-4">
                     <View className="flex-1">
-                      <Text className="text-lg font-semibold text-gray-900">
-                        {agent.users?.nom}
-                      </Text>
-                      <Text className="text-gray-500 text-sm">
-                        {agent.users?.email}
-                      </Text>
+                      <Text className="text-lg font-semibold text-gray-900">{agent.users?.nom}</Text>
+                      <Text className="text-gray-500 text-sm">{agent.users?.email}</Text>
                       <View className="flex-row items-center mt-2">
                         <Text className="text-gray-600 text-sm">Compte: </Text>
                         <Text className={`text-sm font-medium ${getAccountStatusColor(agent.users?.statut)}`}>
                           {agent.users?.statut === 'actif' ? 'Actif' : 'Inactif'}
                         </Text>
+                        <Text className="text-gray-600 text-sm ml-3">Rôle: </Text>
+                        <Text className="text-sm font-medium text-gray-900">{agent.users?.role}</Text>
                       </View>
                     </View>
-                    
+
                     <View className="items-end">
-                      <View
-                        className={`px-3 py-1 rounded-full ${getStatusColor(agent.disponibilite)}`}
-                      >
-                        <Text className="text-sm font-medium">
-                          {getStatusText(agent.disponibilite)}
-                        </Text>
+                      <View className={`px-3 py-1 rounded-full ${getStatusColor(agent.disponibilite)}`}>
+                        <Text className="text-sm font-medium">{getStatusText(agent.disponibilite)}</Text>
                       </View>
                     </View>
                   </View>
@@ -215,52 +227,56 @@ export default function AdminAgentsScreen() {
                   <View className="space-y-2 mb-4">
                     <View className="flex-row items-center justify-between">
                       <Text className="text-gray-600 text-sm">Zone assignée:</Text>
-                      <Text className="text-gray-900 font-medium">
-                        {agent.zone_assignee || 'Non assignée'}
-                      </Text>
+                      <Text className="text-gray-900 font-medium">{agent.zone_assignee || 'Non assignée'}</Text>
                     </View>
-                    
                     <View className="flex-row items-center justify-between">
                       <Text className="text-gray-600 text-sm">Heure d'arrivée:</Text>
-                      <Text className="text-gray-900 font-medium">
-                        {formatTime(agent.heure_arrivee)}
-                      </Text>
+                      <Text className="text-gray-900 font-medium">{formatTime(agent.heure_arrivee)}</Text>
                     </View>
-                    
                     <View className="flex-row items-center justify-between">
                       <Text className="text-gray-600 text-sm">Heure de départ:</Text>
-                      <Text className="text-gray-900 font-medium">
-                        {formatTime(agent.heure_depart)}
-                      </Text>
+                      <Text className="text-gray-900 font-medium">{formatTime(agent.heure_depart)}</Text>
                     </View>
                   </View>
 
                   <View className="flex-row items-center justify-between pt-4 border-t border-gray-100">
                     <View className="flex-row items-center">
                       <Ionicons name="qr-code" size={16} color="#6b7280" />
-                      <Text className="text-gray-500 text-sm ml-2 font-mono">
-                        {agent.qr_code}
-                      </Text>
+                      <Text className="text-gray-500 text-sm ml-2 font-mono">{agent.qr_code}</Text>
                     </View>
-                    
-                    <TouchableOpacity
-                      className={`px-4 py-2 rounded-lg ${
-                        agent.users?.statut === 'actif'
-                          ? 'bg-danger-100'
-                          : 'bg-success-100'
-                      }`}
-                      onPress={() => toggleAgentStatus(agent.users?.id, agent.users?.statut)}
-                    >
-                      <Text
-                        className={`text-sm font-medium ${
-                          agent.users?.statut === 'actif'
-                            ? 'text-danger-700'
-                            : 'text-success-700'
+
+                    <View className="flex-row items-center space-x-2">
+                      <TouchableOpacity
+                        className={`px-4 py-2 rounded-lg ${
+                          agent.users?.statut === 'actif' ? 'bg-danger-100' : 'bg-success-100'
                         }`}
+                        onPress={() => toggleAgentStatus(agent.users?.id, agent.users?.statut)}
                       >
-                        {agent.users?.statut === 'actif' ? 'Désactiver' : 'Activer'}
-                      </Text>
-                    </TouchableOpacity>
+                        <Text
+                          className={`text-sm font-medium ${
+                            agent.users?.statut === 'actif' ? 'text-danger-700' : 'text-success-700'
+                          }`}
+                        >
+                          {agent.users?.statut === 'actif' ? 'Désactiver' : 'Activer'}
+                        </Text>
+                      </TouchableOpacity>
+
+                      {agent.users?.role === 'admin' ? (
+                        <TouchableOpacity
+                          className="px-4 py-2 rounded-lg bg-danger-100"
+                          onPress={() => revokeAdmin(agent.users?.id)}
+                        >
+                          <Text className="text-sm font-medium text-danger-700">Retirer admin</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity
+                          className="px-4 py-2 rounded-lg bg-primary-100"
+                          onPress={() => promoteToAdmin(agent.users?.id)}
+                        >
+                          <Text className="text-sm font-medium text-primary-800">Promouvoir admin</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
                 </View>
               ))}

@@ -36,14 +36,14 @@
         {
           "color": "#ffffff"
         }
-      ],
-      [
-        "expo-barcode-scanner",
-        {
-          "cameraPermission": "Allow SecureGuard to access camera for QR code scanning."
-        }
       ]
     ],
-    "scheme": "secureguard"
+    "scheme": "secureguard",
+    "extra": {
+      "eas": {
+        "projectId": "00290657-f980-4860-8962-15bffba296ae"
+      }
+    },
+    "owner": "kof70"
   }
 }
