@@ -6,6 +6,7 @@ import AdminAgentsScreen from '../screens/admin/AdminAgentsScreen';
 import AdminAlertsScreen from '../screens/admin/AdminAlertsScreen';
 import AdminAnnouncesScreen from '../screens/admin/AdminAnnouncesScreen';
 import AdminProfileScreen from '../screens/admin/AdminProfileScreen';
+import ClientScannerScreen from '../screens/client/ClientScannerScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -24,6 +25,8 @@ export default function AdminNavigator() {
             iconName = focused ? 'warning' : 'warning-outline';
           } else if (route.name === 'Announces') {
             iconName = focused ? 'megaphone' : 'megaphone-outline';
+          } else if (route.name === 'Scanner') {
+            iconName = focused ? 'qr-code' : 'qr-code-outline';
           } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           } else {
@@ -56,6 +59,11 @@ export default function AdminNavigator() {
         name="Announces" 
         component={AdminAnnouncesScreen}
         options={{ title: 'Annonces' }}
+      />
+      <Tab.Screen 
+        name="Scanner" 
+        component={ClientScannerScreen}
+        options={{ title: 'Scanner' }}
       />
       <Tab.Screen 
         name="Profile" 

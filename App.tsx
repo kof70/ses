@@ -1,4 +1,5 @@
-import './global.css';
+import 'react-native-gesture-handler';
+import './global.css'; // NativeWind styles restored
 import 'react-native-url-polyfill/auto';
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
@@ -11,21 +12,28 @@ import AuthNavigator from './src/navigation/AuthNavigator';
 import AppNavigator from './src/navigation/AppNavigator';
 import { useAuth } from './src/contexts/AuthContext';
 import LoadingScreen from './src/screens/LoadingScreen';
+import PendingApprovalScreen from './src/screens/PendingApprovalScreen';
 
 const Stack = createStackNavigator();
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, userProfile, loading } = useAuth();
 
   if (loading) {
     return <LoadingScreen />;
   }
 
+  const isPending = user && userProfile && userProfile.statut !== 'actif';
+
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user ? (
-          <Stack.Screen name="App" component={AppNavigator} />
+          isPending ? (
+            <Stack.Screen name="Pending" component={PendingApprovalScreen} />
+          ) : (
+            <Stack.Screen name="App" component={AppNavigator} />
+          )
         ) : (
           <Stack.Screen name="Auth" component={AuthNavigator} />
         )}

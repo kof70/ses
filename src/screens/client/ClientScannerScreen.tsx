@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BarCodeScanner } from 'expo-barcode-scanner';
+import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabase } from '../../contexts/SupabaseContext';
@@ -15,20 +15,18 @@ import { useSupabase } from '../../contexts/SupabaseContext';
 export default function ClientScannerScreen() {
   const { userProfile } = useAuth();
   const supabase = useSupabase();
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
+  const hasPermission = permission?.granted ?? null;
   const [scanned, setScanned] = useState(false);
   const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
-    const getBarCodeScannerPermissions = async () => {
-      const { status } = await BarCodeScanner.requestPermissionsAsync();
-      setHasPermission(status === 'granted');
-    };
+    if (permission == null) {
+      requestPermission();
+    }
+  }, [permission]);
 
-    getBarCodeScannerPermissions();
-  }, []);
-
-  const handleBarCodeScanned = async ({ type, data }: { type: string; data: string }) => {
+  const handleBarCodeScanned = async ({ data }: BarcodeScanningResult) => {
     setScanned(true);
     
     try {
@@ -149,7 +147,7 @@ export default function ClientScannerScreen() {
           </Text>
           <TouchableOpacity
             className="bg-primary-900 px-6 py-3 rounded-lg mt-6"
-            onPress={() => BarCodeScanner.requestPermissionsAsync()}
+            onPress={() => requestPermission()}
           >
             <Text className="text-white font-semibold">Autoriser l'accès</Text>
           </TouchableOpacity>
@@ -170,8 +168,9 @@ export default function ClientScannerScreen() {
 
       {/* Scanner */}
       <View className="flex-1 relative">
-        <BarCodeScanner
-          onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+        <CameraView
+          onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
           style={StyleSheet.absoluteFillObject}
         />
         

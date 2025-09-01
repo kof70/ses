@@ -39,56 +39,141 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('users')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
+      // If no row found, return null without logging as error
       if (error) {
+        // PostgREST code when 0 rows with single: PGRST116; with maybeSingle, we shouldn't get it, but keep guard
+        if ((error as any)?.code === 'PGRST116') {
+          return null;
+        }
         console.error('Error fetching user profile:', error);
         return null;
       }
 
-      return data;
+      return data ?? null;
     } catch (error) {
       console.error('Error fetching user profile:', error);
       return null;
     }
   };
 
+  const ensureUserProfile = async (user: User): Promise<UserProfile | null> => {
+    // Try to create a minimal default profile if missing
+    try {
+      const defaultNom = user.email?.split('@')[0] || 'Utilisateur';
+      const defaultRole: 'agent' | 'client' | 'admin' = 'client';
+
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          id: user.id,
+          email: user.email || '',
+          nom: defaultNom,
+          role: defaultRole,
+          statut: 'actif',
+        })
+        .select('*')
+        .single();
+
+      if (error) {
+        console.error('Error auto-creating user profile:', error);
+        return null;
+      }
+
+      return data as unknown as UserProfile;
+    } catch (error) {
+      console.error('Error auto-creating user profile:', error);
+      return null;
+    }
+  };
+
   const refreshProfile = async () => {
-    if (user) {
+    if (!user) return;
+    try {
       const profile = await fetchUserProfile(user.id);
       setUserProfile(profile);
+    } catch (error) {
+      console.error('Error refreshing profile:', error);
     }
   };
 
   useEffect(() => {
+    console.log('🔐 AuthContext: Starting auth initialization...');
+    
+    // Safety timeout to prevent infinite loading
+    const safetyTimeout = setTimeout(() => {
+      console.warn('⚠️ AuthContext: Safety timeout reached, forcing loading to false');
+      setLoading(false);
+    }, 10000); // 10 seconds max
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('🔐 AuthContext: Initial session:', session ? 'Found' : 'None');
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserProfile(session.user.id).then(setUserProfile);
+        console.log('🔐 AuthContext: Fetching profile for user:', session.user.id);
+        fetchUserProfile(session.user.id).then(async (profile) => {
+          if (!profile) {
+            // Attempt to create a default profile (handles earlier failed inserts)
+            const created = await ensureUserProfile(session.user!);
+            setUserProfile(created);
+          } else {
+            setUserProfile(profile);
+          }
+        }).finally(() => {
+          console.log('🔐 AuthContext: Profile fetch completed, setting loading to false');
+          clearTimeout(safetyTimeout);
+          setLoading(false);
+        });
+      } else {
+        console.log('🔐 AuthContext: No session, setting loading to false');
+        clearTimeout(safetyTimeout);
+        setLoading(false);
       }
+    }).catch(error => {
+      console.error('🔐 AuthContext: Error getting session:', error);
+      clearTimeout(safetyTimeout);
       setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('🔐 AuthContext: Auth state change:', event, session ? 'Session' : 'No session');
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          const profile = await fetchUserProfile(session.user.id);
-          setUserProfile(profile);
+          try {
+            console.log('🔐 AuthContext: Fetching profile on auth change for user:', session.user.id);
+            const profile = await fetchUserProfile(session.user.id);
+            if (!profile) {
+              const created = await ensureUserProfile(session.user);
+              setUserProfile(created);
+            } else {
+              setUserProfile(profile);
+            }
+          } catch (error) {
+            console.error('🔐 AuthContext: Error fetching profile on auth change:', error);
+            setUserProfile(null);
+          } finally {
+            console.log('🔐 AuthContext: Auth change profile fetch completed, setting loading to false');
+            setLoading(false);
+          }
         } else {
+          console.log('🔐 AuthContext: No session on auth change, setting loading to false');
           setUserProfile(null);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(safetyTimeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -117,7 +202,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           nom,
           role,
           statut: 'actif',
-        });
+        })
+        .single();
 
       if (profileError) {
         console.error('Error creating user profile:', profileError);
