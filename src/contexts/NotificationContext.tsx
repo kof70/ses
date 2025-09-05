@@ -37,22 +37,29 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const { user, userProfile } = useAuth();
 
   useEffect(() => {
-    registerForPushNotificationsAsync().then(token => {
-      setExpoPushToken(token);
-      
-      // Store token in user profile if available
-      if (token && user) {
-        supabase
-          .from('users')
-          .update({ push_token: token })
-          .eq('id', user.id)
-          .then(({ error }) => {
-            if (error) {
-              console.error('Error updating push token:', error);
-            }
-          });
-      }
-    });
+    const isExpoGo = (Constants as any)?.appOwnership === 'expo';
+
+    if (!isExpoGo) {
+      registerForPushNotificationsAsync().then(token => {
+        setExpoPushToken(token);
+
+        // Store token in user profile if available
+        if (token && user) {
+          supabase
+            .from('users')
+            .update({ push_token: token })
+            .eq('id', user.id)
+            .then(({ error }) => {
+              if (error) {
+                console.error('Error updating push token:', error);
+              }
+            });
+        }
+      });
+    } else {
+      // Skip remote push registration in Expo Go (SDK 53 removes Android remote notifications)
+      console.log('expo-notifications: push registration skipped in Expo Go');
+    }
 
     const notificationListener = Notifications.addNotificationReceivedListener(notification => {
       setNotification(notification);
