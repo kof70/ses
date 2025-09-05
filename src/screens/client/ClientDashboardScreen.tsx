@@ -32,7 +32,7 @@ export default function ClientDashboardScreen() {
         .from('clients')
         .select('*')
         .eq('user_id', userProfile.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching client data:', error);
@@ -42,7 +42,7 @@ export default function ClientDashboardScreen() {
       setClientData(data);
       
       // Get recent scans from historique_scans
-      const scans = data.historique_scans || [];
+      const scans = data?.historique_scans || [];
       setRecentScans(scans.slice(-5).reverse()); // Last 5 scans, most recent first
     } catch (error) {
       console.error('Error fetching client data:', error);

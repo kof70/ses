@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSupabase } from '../../contexts/SupabaseContext';
 
 export default function RegisterScreen({ navigation }: any) {
   const [email, setEmail] = useState('');
@@ -22,6 +23,7 @@ export default function RegisterScreen({ navigation }: any) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { signUp } = useAuth();
+  const supabase = useSupabase();
 
   const handleRegister = async () => {
     if (!email || !password || !nom) {
@@ -40,6 +42,24 @@ export default function RegisterScreen({ navigation }: any) {
     }
 
     setLoading(true);
+
+    // Vérifier si l'email existe déjà
+    try {
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('email')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (existingUser) {
+        setLoading(false);
+        Alert.alert('Erreur', 'Cet email est déjà utilisé');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking existing email:', error);
+    }
+
     const { error } = await signUp(email, password, nom, role);
     setLoading(false);
 

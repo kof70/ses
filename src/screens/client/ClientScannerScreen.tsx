@@ -19,6 +19,7 @@ export default function ClientScannerScreen() {
   const hasPermission = permission?.granted ?? null;
   const [scanned, setScanned] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [cameraKey, setCameraKey] = useState(0);
 
   useEffect(() => {
     if (permission == null) {
@@ -59,7 +60,7 @@ export default function ClientScannerScreen() {
         .from('clients')
         .select('historique_scans')
         .eq('user_id', userProfile?.id)
-        .single();
+        .maybeSingle();
 
       if (clientError) {
         console.error('Error fetching client data:', clientError);
@@ -169,6 +170,7 @@ export default function ClientScannerScreen() {
       {/* Scanner */}
       <View className="flex-1 relative">
         <CameraView
+          key={cameraKey}
           onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
           barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
           style={StyleSheet.absoluteFillObject}
@@ -201,7 +203,10 @@ export default function ClientScannerScreen() {
         <View className="absolute bottom-20 left-0 right-0 items-center">
           <TouchableOpacity
             className="bg-primary-900 px-6 py-3 rounded-full"
-            onPress={() => setScanned(false)}
+            onPress={() => {
+              setScanned(false);
+              setCameraKey(prev => prev + 1); // Redémarre la caméra
+            }}
           >
             <Text className="text-white font-semibold">Scanner à nouveau</Text>
           </TouchableOpacity>
