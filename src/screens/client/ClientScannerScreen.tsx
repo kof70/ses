@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabase } from '../../contexts/SupabaseContext';
 
@@ -20,6 +21,7 @@ export default function ClientScannerScreen() {
   const [scanned, setScanned] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [cameraKey, setCameraKey] = useState(0);
+  const cameraRef = useRef<CameraView>(null);
 
   useEffect(() => {
     if (permission == null) {
@@ -27,8 +29,29 @@ export default function ClientScannerScreen() {
     }
   }, [permission]);
 
+  // Réinitialiser la caméra quand on revient sur l'écran
+  useFocusEffect(
+    React.useCallback(() => {
+      // Reset des états quand on revient sur l'écran
+      setScanned(false);
+      setScanning(false);
+      
+      // Délai pour s'assurer que la navigation est terminée avant de réinitialiser la caméra
+      const timer = setTimeout(() => {
+        setCameraKey(prev => prev + 1);
+        console.log('Scanner screen focused - camera reset');
+      }, 100);
+      
+      return () => clearTimeout(timer);
+    }, [])
+  );
+
   const handleBarCodeScanned = async ({ data }: BarcodeScanningResult) => {
+    // Empêcher les scans multiples pendant le traitement
+    if (scanned) return;
+    
     setScanned(true);
+    setScanning(true);
     
     try {
       // Find agent by QR code
@@ -43,6 +66,8 @@ export default function ClientScannerScreen() {
 
       if (error || !agentData) {
         Alert.alert('Erreur', 'Code QR invalide ou agent non trouvé');
+        setScanned(false);
+        setScanning(false);
         return;
       }
 
@@ -64,6 +89,8 @@ export default function ClientScannerScreen() {
 
       if (clientError) {
         console.error('Error fetching client data:', clientError);
+        setScanned(false);
+        setScanning(false);
         return;
       }
 
@@ -77,6 +104,9 @@ export default function ClientScannerScreen() {
 
       if (updateError) {
         console.error('Error updating scan history:', updateError);
+        setScanned(false);
+        setScanning(false);
+        return;
       }
 
       // Show agent status
@@ -88,14 +118,19 @@ export default function ClientScannerScreen() {
         `Agent: ${agentData.users?.nom}\nStatut: ${statusText}\nZone: ${agentData.zone_assignee || 'Non assignée'}`,
         [
           {
-            text: 'OK',
-            onPress: () => setScanned(false),
+            text: 'Scanner à nouveau',
+            onPress: () => {
+              setScanned(false);
+              setScanning(false);
+            },
           },
         ]
       );
     } catch (error) {
       console.error('Error processing scan:', error);
       Alert.alert('Erreur', 'Erreur lors du traitement du scan');
+      setScanned(false);
+      setScanning(false);
     }
   };
 
@@ -139,7 +174,7 @@ export default function ClientScannerScreen() {
     return (
       <SafeAreaView className="flex-1 bg-white">
         <View className="flex-1 justify-center items-center px-6">
-          <Ionicons name="camera-off" size={64} color="#9ca3af" />
+          <Ionicons name="camera" size={64} color="#9ca3af" />
           <Text className="text-xl font-semibold text-gray-900 mt-4 text-center">
             Accès caméra requis
           </Text>
@@ -171,6 +206,7 @@ export default function ClientScannerScreen() {
       <View className="flex-1 relative">
         <CameraView
           key={cameraKey}
+          ref={cameraRef}
           onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
           barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
           style={StyleSheet.absoluteFillObject}
@@ -189,29 +225,35 @@ export default function ClientScannerScreen() {
 
         {/* Instructions */}
         <View className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-6">
-          <Text className="text-white text-center text-lg font-medium mb-2">
-            Alignez le code QR dans le cadre
-          </Text>
-          <Text className="text-gray-300 text-center">
-            Le scan se fera automatiquement
-          </Text>
+          {scanning ? (
+            <View className="items-center">
+              <Text className="text-white text-center text-lg font-medium mb-2">
+                Traitement du scan...
+              </Text>
+              <View className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            </View>
+          ) : scanned ? (
+            <View className="items-center">
+              <Text className="text-green-400 text-center text-lg font-medium mb-2">
+                ✓ Scan terminé
+              </Text>
+              <Text className="text-gray-300 text-center">
+                Pointez vers un autre code QR pour scanner
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Text className="text-white text-center text-lg font-medium mb-2">
+                Alignez le code QR dans le cadre
+              </Text>
+              <Text className="text-gray-300 text-center">
+                Le scan se fera automatiquement
+              </Text>
+            </>
+          )}
         </View>
       </View>
 
-      {/* Reset button when scanned */}
-      {scanned && (
-        <View className="absolute bottom-20 left-0 right-0 items-center">
-          <TouchableOpacity
-            className="bg-primary-900 px-6 py-3 rounded-full"
-            onPress={() => {
-              setScanned(false);
-              setCameraKey(prev => prev + 1); // Redémarre la caméra
-            }}
-          >
-            <Text className="text-white font-semibold">Scanner à nouveau</Text>
-          </TouchableOpacity>
-        </View>
-      )}
     </SafeAreaView>
   );
 }

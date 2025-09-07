@@ -59,33 +59,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const ensureUserProfile = async (user: User): Promise<UserProfile | null> => {
-    // Try to create a minimal default profile if missing
-    try {
-      const defaultNom = user.email?.split('@')[0] || 'Utilisateur';
-      const defaultRole: 'agent' | 'client' | 'admin' = 'client';
-
-      const { data, error } = await supabase
-        .from('users')
-        .insert({
-          id: user.id,
-          email: user.email || '',
-          nom: defaultNom,
-          role: defaultRole,
-          statut: 'actif',
-        })
-        .select('*')
-        .single();
-
-      if (error) {
-        console.error('Error auto-creating user profile:', error);
-        return null;
-      }
-
-      return data as unknown as UserProfile;
-    } catch (error) {
-      console.error('Error auto-creating user profile:', error);
-      return null;
-    }
+    // Ne pas créer de profil par défaut automatiquement
+    // Le profil doit être créé via signUp ou manuellement
+    console.log('ensureUserProfile: No profile found for user, but not auto-creating to avoid role conflicts');
+    return null;
   };
 
   const refreshProfile = async () => {
@@ -105,23 +82,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const safetyTimeout = setTimeout(() => {
       console.warn('⚠️ AuthContext: Safety timeout reached, forcing loading to false');
       setLoading(false);
-    }, 10000); // 10 seconds max
+    }, 15000); // 15 seconds max - increased timeout
 
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    console.log('🔐 AuthContext: Getting initial session...');
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('🔐 AuthContext: Error getting session:', error);
+        clearTimeout(safetyTimeout);
+        setLoading(false);
+        return;
+      }
+      
       console.log('🔐 AuthContext: Initial session:', session ? 'Found' : 'None');
       setSession(session);
       setUser(session?.user ?? null);
+      
       if (session?.user) {
         console.log('🔐 AuthContext: Fetching profile for user:', session.user.id);
         fetchUserProfile(session.user.id).then(async (profile) => {
+          console.log('🔐 AuthContext: Profile fetch result:', profile ? 'Found' : 'Not found');
           if (!profile) {
             // Attempt to create a default profile (handles earlier failed inserts)
+            console.log('🔐 AuthContext: No profile found, attempting to create default...');
             const created = await ensureUserProfile(session.user!);
             setUserProfile(created);
           } else {
             setUserProfile(profile);
           }
+        }).catch(error => {
+          console.error('🔐 AuthContext: Error fetching profile:', error);
+          setUserProfile(null);
         }).finally(() => {
           console.log('🔐 AuthContext: Profile fetch completed, setting loading to false');
           clearTimeout(safetyTimeout);
