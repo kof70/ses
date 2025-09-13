@@ -19,6 +19,7 @@ export default function RegisterScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [nom, setNom] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [role, setRole] = useState<'agent' | 'client'>('client');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -26,7 +27,7 @@ export default function RegisterScreen({ navigation }: any) {
   const supabase = useSupabase();
 
   const handleRegister = async () => {
-    if (!email || !password || !nom) {
+    if (!email || !password || !nom || !phoneNumber) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs');
       return;
     }
@@ -38,6 +39,13 @@ export default function RegisterScreen({ navigation }: any) {
 
     if (password.length < 6) {
       Alert.alert('Erreur', 'Le mot de passe doit contenir au moins 6 caractères');
+      return;
+    }
+
+    // Validation du numéro de téléphone (format basique)
+    const phoneRegex = /^[\+]?[0-9\s\-\(\)]{10,}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      Alert.alert('Erreur', 'Veuillez entrer un numéro de téléphone valide');
       return;
     }
 
@@ -60,7 +68,7 @@ export default function RegisterScreen({ navigation }: any) {
       console.error('Error checking existing email:', error);
     }
 
-    const { error } = await signUp(email, password, nom, role);
+    const { error } = await signUp(email, password, nom, phoneNumber, role);
     setLoading(false);
 
     if (error) {
@@ -97,10 +105,10 @@ export default function RegisterScreen({ navigation }: any) {
             {/* Form */}
             <View className="space-y-4">
               <View>
-                <Text className="text-gray-700 mb-2 font-medium">Nom complet</Text>
+                <Text className="text-gray-700 mb-2 font-medium">Nom et prénom</Text>
                 <TextInput
                   className="bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 text-base"
-                  placeholder="Votre nom complet"
+                  placeholder="Saisissez vos nom et prénom"
                   value={nom}
                   onChangeText={setNom}
                 />
@@ -114,6 +122,19 @@ export default function RegisterScreen({ navigation }: any) {
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+
+              <View>
+                <Text className="text-gray-700 mb-2 font-medium">Numéro de téléphone</Text>
+                <TextInput
+                  className="bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 text-base"
+                  placeholder="+33 6 12 34 56 78"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  keyboardType="phone-pad"
                   autoCapitalize="none"
                   autoCorrect={false}
                 />

@@ -111,15 +111,15 @@ export default function AdminProfileScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <ScrollView>
-        {/* Header */}
-        <View className="bg-primary-900 px-6 py-8">
+        {/* Header - style clair */}
+        <View className="bg-white px-6 py-6 border-b border-gray-100">
           <View className="flex-row items-center justify-between">
             <View>
-              <Text className="text-white text-2xl font-bold">Mon Profil</Text>
-              <Text className="text-primary-100 mt-1">Administrateur</Text>
+              <Text className="text-2xl font-bold text-gray-900">Mon Profil</Text>
+              <Text className="text-gray-500 mt-1">Administrateur</Text>
             </View>
             <TouchableOpacity
-              className="bg-primary-800 p-3 rounded-full"
+              className="bg-gray-900 p-3 rounded-full"
               onPress={() => setEditing(!editing)}
             >
               <Ionicons 
@@ -132,18 +132,18 @@ export default function AdminProfileScreen() {
         </View>
 
         <View className="px-6 py-6 space-y-6">
-          {/* Profile Info */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
+          {/* Profile Info - Optimisé */}
+          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <Text className="text-lg font-semibold text-gray-900 mb-4">
               Informations personnelles
             </Text>
             
             <View className="space-y-4">
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Nom complet</Text>
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Nom complet</Text>
                 {editing ? (
                   <TextInput
-                    className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-2"
+                    className="bg-white border border-gray-300 rounded-lg px-3 py-2 mt-1"
                     value={nom}
                     onChangeText={setNom}
                     placeholder="Votre nom complet"
@@ -153,23 +153,23 @@ export default function AdminProfileScreen() {
                 )}
               </View>
               
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Email</Text>
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Email</Text>
                 <Text className="text-gray-900 font-medium">{userProfile?.email}</Text>
               </View>
               
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Rôle</Text>
-                <View className="bg-primary-100 px-3 py-1 rounded-full self-start">
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Rôle</Text>
+                <View className="bg-primary-100 px-3 py-1 rounded-full self-start mt-1">
                   <Text className="text-primary-800 font-medium capitalize">
                     {userProfile?.role}
                   </Text>
                 </View>
               </View>
               
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Statut du compte</Text>
-                <View className="bg-success-100 px-3 py-1 rounded-full self-start">
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Statut du compte</Text>
+                <View className="bg-success-100 px-3 py-1 rounded-full self-start mt-1">
                   <Text className="text-success-800 font-medium capitalize">
                     {userProfile?.statut}
                   </Text>
@@ -178,39 +178,45 @@ export default function AdminProfileScreen() {
             </View>
           </View>
 
-          {/* System Statistics */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
+          {/* System Statistics - Optimisé */}
+          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <Text className="text-lg font-semibold text-gray-900 mb-4">
               Statistiques du système
             </Text>
             
-            <View className="grid grid-cols-2 gap-4">
-              <View className="bg-primary-50 p-4 rounded-lg">
-                <Text className="text-2xl font-bold text-primary-900">
-                  {stats.totalUsers}
-                </Text>
-                <Text className="text-primary-700 text-sm">Utilisateurs total</Text>
+            <View className="space-y-4">
+              {/* Première ligne */}
+              <View className="flex-row space-x-4">
+                <View className="flex-1 bg-primary-50 p-4 rounded-lg border border-primary-100">
+                  <Text className="text-2xl font-bold text-primary-900">
+                    {stats.totalUsers}
+                  </Text>
+                  <Text className="text-primary-700 text-sm font-medium">Utilisateurs total</Text>
+                </View>
+                
+                <View className="flex-1 bg-success-50 p-4 rounded-lg border border-success-100">
+                  <Text className="text-2xl font-bold text-success-900">
+                    {stats.totalAgents}
+                  </Text>
+                  <Text className="text-success-700 text-sm font-medium">Agents</Text>
+                </View>
               </View>
               
-              <View className="bg-success-50 p-4 rounded-lg">
-                <Text className="text-2xl font-bold text-success-900">
-                  {stats.totalAgents}
-                </Text>
-                <Text className="text-success-700 text-sm">Agents</Text>
-              </View>
-              
-              <View className="bg-warning-50 p-4 rounded-lg">
-                <Text className="text-2xl font-bold text-warning-900">
-                  {stats.totalClients}
-                </Text>
-                <Text className="text-warning-700 text-sm">Clients</Text>
-              </View>
-              
-              <View className="bg-danger-50 p-4 rounded-lg">
-                <Text className="text-2xl font-bold text-danger-900">
-                  {stats.totalAlerts}
-                </Text>
-                <Text className="text-danger-700 text-sm">Alertes SOS</Text>
+              {/* Deuxième ligne */}
+              <View className="flex-row space-x-4">
+                <View className="flex-1 bg-warning-50 p-4 rounded-lg border border-warning-100">
+                  <Text className="text-2xl font-bold text-warning-900">
+                    {stats.totalClients}
+                  </Text>
+                  <Text className="text-warning-700 text-sm font-medium">Clients</Text>
+                </View>
+                
+                <View className="flex-1 bg-danger-50 p-4 rounded-lg border border-danger-100">
+                  <Text className="text-2xl font-bold text-danger-900">
+                    {stats.totalAlerts}
+                  </Text>
+                  <Text className="text-danger-700 text-sm font-medium">Alertes SOS</Text>
+                </View>
               </View>
             </View>
             
@@ -309,11 +315,13 @@ export default function AdminProfileScreen() {
             </View>
           </View>
 
-          {/* App Info */}
-          <View className="bg-blue-50 rounded-xl p-6">
+          {/* App Info - Optimisé */}
+          <View className="bg-blue-50 rounded-xl p-5 border border-blue-100">
             <View className="flex-row items-start">
-              <Ionicons name="information-circle" size={24} color="#3b82f6" />
-              <View className="ml-3 flex-1">
+              <View className="bg-blue-100 p-2 rounded-lg mr-3">
+                <Ionicons name="information-circle" size={20} color="#3b82f6" />
+              </View>
+              <View className="flex-1">
                 <Text className="text-blue-900 font-semibold mb-2">
                   SecureGuard Pro - Administration
                 </Text>

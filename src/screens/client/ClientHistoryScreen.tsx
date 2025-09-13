@@ -131,10 +131,10 @@ export default function ClientHistoryScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-primary-900 px-6 py-8">
-        <Text className="text-white text-2xl font-bold">Historique des scans</Text>
-        <Text className="text-primary-100 mt-1">
+      {/* Header - style clair */}
+      <View className="bg-white px-6 py-6 border-b border-gray-100">
+        <Text className="text-2xl font-bold text-gray-900">Historique des scans</Text>
+        <Text className="text-gray-500 mt-1">
           {scans.length} scan{scans.length > 1 ? 's' : ''} effectué{scans.length > 1 ? 's' : ''}
         </Text>
       </View>

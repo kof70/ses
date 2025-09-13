@@ -7,9 +7,14 @@ const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://your-projec
 const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key-here';
 
 // Vérification des variables d'environnement
+console.log('🔧 Supabase URL:', supabaseUrl);
+console.log('🔧 Supabase Key:', supabaseAnonKey.substring(0, 20) + '...');
+
 if (!supabaseUrl.includes('supabase.co') || !supabaseAnonKey.startsWith('eyJ')) {
-  console.warn('⚠️ ATTENTION: Configurez vos clés Supabase dans le fichier .env');
-  console.warn('Voir le fichier .env.example pour la configuration');
+  console.error('❌ ERREUR: Configuration Supabase invalide');
+  console.error('Veuillez créer un fichier .env avec vos vraies clés Supabase');
+  console.error('EXPO_PUBLIC_SUPABASE_URL=https://votre-projet.supabase.co');
+  console.error('EXPO_PUBLIC_SUPABASE_ANON_KEY=votre-cle-anon');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -93,6 +98,9 @@ export type Database = {
           historique_scans: any[];
           created_at: string;
           updated_at: string;
+          last_latitude?: number | null;
+          last_longitude?: number | null;
+          last_position_at?: string | null;
         };
         Insert: {
           id?: string;
@@ -100,12 +108,18 @@ export type Database = {
           historique_scans?: any[];
           created_at?: string;
           updated_at?: string;
+          last_latitude?: number | null;
+          last_longitude?: number | null;
+          last_position_at?: string | null;
         };
         Update: {
           id?: string;
           user_id?: string;
           historique_scans?: any[];
           updated_at?: string;
+          last_latitude?: number | null;
+          last_longitude?: number | null;
+          last_position_at?: string | null;
         };
       };
       sos_alerts: {
@@ -171,6 +185,94 @@ export type Database = {
           destinataires?: 'tous' | 'agents' | 'clients';
           created_by?: string;
           updated_at?: string;
+        };
+      };
+      zones: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          description?: string | null;
+        };
+      };
+      client_zones: {
+        Row: {
+          id: string;
+          client_user_id: string;
+          zone_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_user_id: string;
+          zone_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          client_user_id?: string;
+          zone_id?: string;
+        };
+      };
+      agent_zones: {
+        Row: {
+          id: string;
+          agent_user_id: string;
+          zone_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          agent_user_id: string;
+          zone_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          agent_user_id?: string;
+          zone_id?: string;
+        };
+      };
+      agent_client_assignments: {
+        Row: {
+          id: string;
+          agent_user_id: string;
+          client_user_id: string;
+          latitude: number | null;
+          longitude: number | null;
+          note: string | null;
+          statut: 'assigne' | 'en_cours' | 'termine' | 'annule';
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          agent_user_id: string;
+          client_user_id: string;
+          latitude?: number | null;
+          longitude?: number | null;
+          note?: string | null;
+          statut?: 'assigne' | 'en_cours' | 'termine' | 'annule';
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          agent_user_id?: string;
+          client_user_id?: string;
+          latitude?: number | null;
+          longitude?: number | null;
+          note?: string | null;
+          statut?: 'assigne' | 'en_cours' | 'termine' | 'annule';
         };
       };
     };

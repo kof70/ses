@@ -37,8 +37,8 @@
           "color": "#ffffff"
         }
       ],
-      "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-asset"
     ],
     "scheme": "secureguard",
     "extra": {

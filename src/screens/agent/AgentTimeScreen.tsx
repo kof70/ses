@@ -13,7 +13,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSupabase } from '../../contexts/SupabaseContext';
 
 export default function AgentTimeScreen() {
-  const { userProfile } = useAuth();
+  const { userProfile, offlineReadOnly, assertOnlineOrThrow } = useAuth();
   const supabase = useSupabase();
   const [agentData, setAgentData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +57,11 @@ export default function AgentTimeScreen() {
     setActionLoading(true);
     
     try {
+      if (offlineReadOnly) {
+        Alert.alert('Hors ligne', 'Mode lecture seule. Revenir en ligne pour modifier.');
+        return;
+      }
+      assertOnlineOrThrow();
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('agents')
@@ -96,6 +101,11 @@ export default function AgentTimeScreen() {
     setActionLoading(true);
     
     try {
+      if (offlineReadOnly) {
+        Alert.alert('Hors ligne', 'Mode lecture seule. Revenir en ligne pour modifier.');
+        return;
+      }
+      assertOnlineOrThrow();
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('agents')
@@ -175,10 +185,10 @@ export default function AgentTimeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
-        <View className="bg-primary-900 px-6 py-8">
-          <Text className="text-white text-2xl font-bold">Gestion des horaires</Text>
-          <Text className="text-primary-100 mt-1">
+        {/* Header - style clair */}
+        <View className="bg-white px-6 py-6 border-b border-gray-100">
+          <Text className="text-2xl font-bold text-gray-900">Gestion des horaires</Text>
+          <Text className="text-gray-500 mt-1">
             {formatDate(new Date().toISOString())}
           </Text>
         </View>
@@ -229,11 +239,11 @@ export default function AgentTimeScreen() {
           <View className="space-y-4">
             {!isCheckedIn && !isCheckedOut && (
               <TouchableOpacity
-                className={`bg-success-500 rounded-xl p-6 items-center shadow-sm ${
-                  actionLoading ? 'opacity-50' : ''
-                }`}
+                className={`rounded-xl p-6 items-center shadow-sm ${
+                  offlineReadOnly ? 'bg-gray-300' : 'bg-success-500'
+                } ${actionLoading ? 'opacity-50' : ''}`}
                 onPress={handleCheckIn}
-                disabled={actionLoading}
+                disabled={actionLoading || offlineReadOnly}
               >
                 <Ionicons name="log-in" size={32} color="white" />
                 <Text className="text-white text-xl font-bold mt-2">
@@ -247,11 +257,11 @@ export default function AgentTimeScreen() {
 
             {isCheckedIn && (
               <TouchableOpacity
-                className={`bg-danger-500 rounded-xl p-6 items-center shadow-sm ${
-                  actionLoading ? 'opacity-50' : ''
-                }`}
+                className={`rounded-xl p-6 items-center shadow-sm ${
+                  offlineReadOnly ? 'bg-gray-300' : 'bg-danger-500'
+                } ${actionLoading ? 'opacity-50' : ''}`}
                 onPress={handleCheckOut}
-                disabled={actionLoading}
+                disabled={actionLoading || offlineReadOnly}
               >
                 <Ionicons name="log-out" size={32} color="white" />
                 <Text className="text-white text-xl font-bold mt-2">

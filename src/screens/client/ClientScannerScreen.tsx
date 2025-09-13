@@ -14,7 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSupabase } from '../../contexts/SupabaseContext';
 
 export default function ClientScannerScreen() {
-  const { userProfile } = useAuth();
+  const { userProfile, offlineReadOnly, assertOnlineOrThrow } = useAuth();
   const supabase = useSupabase();
   const [permission, requestPermission] = useCameraPermissions();
   const hasPermission = permission?.granted ?? null;
@@ -54,12 +54,19 @@ export default function ClientScannerScreen() {
     setScanning(true);
     
     try {
+      if (offlineReadOnly) {
+        Alert.alert('Hors ligne', 'Le scan enregistre l\'historique. Revenir en ligne pour continuer.');
+        setScanned(false);
+        setScanning(false);
+        return;
+      }
+      assertOnlineOrThrow();
       // Find agent by QR code
       const { data: agentData, error } = await supabase
         .from('agents')
         .select(`
           *,
-          users:user_id (nom, email)
+          users:users!agents_user_id_fkey (nom, email)
         `)
         .eq('qr_code', data)
         .single();
@@ -71,13 +78,63 @@ export default function ClientScannerScreen() {
         return;
       }
 
+      // Déterminer si l'agent est en début ou fin de service
+      const now = new Date();
+      const hasCheckIn = agentData.heure_arrivee && !agentData.heure_depart;
+      const isEndOfDay = agentData.heure_arrivee && 
+        new Date(agentData.heure_arrivee).toDateString() !== now.toDateString();
+
+      let serviceAction = '';
+      let updatedAgentData = { ...agentData };
+
+      if (!hasCheckIn) {
+        // Agent n'a pas encore check-in aujourd'hui -> Check-in
+        serviceAction = 'check-in';
+        const { error: checkInError } = await supabase
+          .from('agents')
+          .update({
+            heure_arrivee: now.toISOString(),
+            disponibilite: 'disponible',
+            updated_at: now.toISOString(),
+          })
+          .eq('user_id', agentData.user_id);
+
+        if (checkInError) {
+          console.error('Error checking in agent:', checkInError);
+        } else {
+          updatedAgentData.heure_arrivee = now.toISOString();
+          updatedAgentData.disponibilite = 'disponible';
+        }
+      } else if (hasCheckIn && !agentData.heure_depart) {
+        // Agent a check-in mais pas check-out -> Check-out
+        serviceAction = 'check-out';
+        const { error: checkOutError } = await supabase
+          .from('agents')
+          .update({
+            heure_depart: now.toISOString(),
+            disponibilite: 'indisponible',
+            updated_at: now.toISOString(),
+          })
+          .eq('user_id', agentData.user_id);
+
+        if (checkOutError) {
+          console.error('Error checking out agent:', checkOutError);
+        } else {
+          updatedAgentData.heure_depart = now.toISOString();
+          updatedAgentData.disponibilite = 'indisponible';
+        }
+      }
+
       // Update client's scan history
       const scanRecord = {
         agent_id: agentData.id,
         agent_name: agentData.users?.nom,
-        agent_status: agentData.disponibilite,
+        agent_status: updatedAgentData.disponibilite,
         scan_date: new Date().toISOString(),
         qr_code: data,
+        service_action: serviceAction,
+        check_in_time: updatedAgentData.heure_arrivee,
+        check_out_time: updatedAgentData.heure_depart,
       };
 
       // Get current client data
@@ -109,13 +166,20 @@ export default function ClientScannerScreen() {
         return;
       }
 
-      // Show agent status
-      const statusText = getStatusText(agentData.disponibilite);
-      const statusColor = getStatusColor(agentData.disponibilite);
+      // Show agent status with service action
+      const statusText = getStatusText(updatedAgentData.disponibilite);
+      const statusColor = getStatusColor(updatedAgentData.disponibilite);
+      
+      let message = `Agent: ${agentData.users?.nom}\nStatut: ${statusText}\nZone: ${agentData.zone_assignee || 'Non assignée'}`;
+      if (serviceAction === 'check-in') {
+        message += '\n\n✅ Agent enregistré en début de service';
+      } else if (serviceAction === 'check-out') {
+        message += '\n\n✅ Agent enregistré en fin de service';
+      }
       
       Alert.alert(
         'Agent scanné',
-        `Agent: ${agentData.users?.nom}\nStatut: ${statusText}\nZone: ${agentData.zone_assignee || 'Non assignée'}`,
+        message,
         [
           {
             text: 'Scanner à nouveau',
@@ -194,10 +258,10 @@ export default function ClientScannerScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-black">
-      {/* Header */}
-      <View className="bg-primary-900 px-6 py-4">
+      {/* Header - style sombre discret pour le scanner */}
+      <View className="bg-black px-6 py-4 border-b border-gray-800">
         <Text className="text-white text-xl font-bold">Scanner QR Code</Text>
-        <Text className="text-primary-100 mt-1">
+        <Text className="text-gray-400 mt-1">
           Pointez vers le code QR d'un agent
         </Text>
       </View>

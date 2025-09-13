@@ -21,6 +21,7 @@ export default function AgentProfileScreen() {
   const [zoneAssignee, setZoneAssignee] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [assignedZones, setAssignedZones] = useState<any[]>([]);
 
   const fetchAgentData = async () => {
     if (!userProfile) return;
@@ -40,6 +41,14 @@ export default function AgentProfileScreen() {
       setAgentData(data);
       setNom(userProfile.nom);
       setZoneAssignee(data.zone_assignee || '');
+
+      try {
+        const { data: az } = await supabase
+          .from('agent_zones')
+          .select('zone_id, zones:zone_id(id, name)')
+          .eq('agent_user_id', userProfile.id);
+        setAssignedZones((az || []).map((r: any) => r.zones).filter(Boolean));
+      } catch {}
     } catch (error) {
       console.error('Error fetching agent data:', error);
     } finally {
@@ -136,15 +145,15 @@ export default function AgentProfileScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <ScrollView>
-        {/* Header */}
-        <View className="bg-primary-900 px-6 py-8">
+        {/* Header - style clair */}
+        <View className="bg-white px-6 py-6 border-b border-gray-100">
           <View className="flex-row items-center justify-between">
             <View>
-              <Text className="text-white text-2xl font-bold">Mon Profil</Text>
-              <Text className="text-primary-100 mt-1">Agent de sécurité</Text>
+              <Text className="text-2xl font-bold text-gray-900">Mon Profil</Text>
+              <Text className="text-gray-500 mt-1">Agent de sécurité</Text>
             </View>
             <TouchableOpacity
-              className="bg-primary-800 p-3 rounded-full"
+              className="bg-gray-900 p-3 rounded-full"
               onPress={() => setEditing(!editing)}
             >
               <Ionicons 
@@ -157,18 +166,18 @@ export default function AgentProfileScreen() {
         </View>
 
         <View className="px-6 py-6 space-y-6">
-          {/* Profile Info */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
+          {/* Profile Info - Optimisé */}
+          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <Text className="text-lg font-semibold text-gray-900 mb-4">
               Informations personnelles
             </Text>
             
             <View className="space-y-4">
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Nom complet</Text>
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Nom complet</Text>
                 {editing ? (
                   <TextInput
-                    className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-2"
+                    className="bg-white border border-gray-300 rounded-lg px-3 py-2 mt-1"
                     value={nom}
                     onChangeText={setNom}
                     placeholder="Votre nom complet"
@@ -178,35 +187,35 @@ export default function AgentProfileScreen() {
                 )}
               </View>
               
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Email</Text>
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Email</Text>
                 <Text className="text-gray-900 font-medium">{userProfile?.email}</Text>
               </View>
               
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Rôle</Text>
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Rôle</Text>
                 <Text className="text-gray-900 font-medium capitalize">{userProfile?.role}</Text>
               </View>
               
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Statut du compte</Text>
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Statut du compte</Text>
                 <Text className="text-gray-900 font-medium capitalize">{userProfile?.statut}</Text>
               </View>
             </View>
           </View>
 
-          {/* Agent Info */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
+          {/* Agent Info - Optimisé */}
+          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <Text className="text-lg font-semibold text-gray-900 mb-4">
               Informations agent
             </Text>
             
             <View className="space-y-4">
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Zone assignée</Text>
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Zone assignée</Text>
                 {editing ? (
                   <TextInput
-                    className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-2"
+                    className="bg-white border border-gray-300 rounded-lg px-3 py-2 mt-1"
                     value={zoneAssignee}
                     onChangeText={setZoneAssignee}
                     placeholder="Zone de patrouille"
@@ -218,15 +227,30 @@ export default function AgentProfileScreen() {
                 )}
               </View>
               
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Statut actuel</Text>
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Statut actuel</Text>
                 <Text className={`font-medium ${getStatusColor(agentData?.disponibilite)}`}>
                   {getStatusText(agentData?.disponibilite)}
                 </Text>
               </View>
-              
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Code QR</Text>
+
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Mes zones</Text>
+                {assignedZones.length === 0 ? (
+                  <Text className="text-gray-900">Aucune zone assignée</Text>
+                ) : (
+                  <View className="flex-row flex-wrap">
+                    {assignedZones.map((z: any) => (
+                      <View key={z.id} className="mr-2 mb-2 px-3 py-1 rounded-full bg-primary-900">
+                        <Text className="text-white text-sm">{z.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Code QR</Text>
                 <Text className="text-gray-900 font-mono text-sm">
                   {agentData?.qr_code}
                 </Text>

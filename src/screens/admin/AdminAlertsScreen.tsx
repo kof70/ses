@@ -7,18 +7,27 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabase } from '../../contexts/SupabaseContext';
 
 export default function AdminAlertsScreen() {
-  const { userProfile } = useAuth();
-  const supabase = useSupabase();
+  // Move hooks to top level to avoid context issues during re-renders
+  const authContext = useAuth();
+  const supabaseContext = useSupabase();
+  const userProfile = authContext?.userProfile;
+  const supabase = supabaseContext;
+  
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'en_cours' | 'resolu'>('all');
+  const [filter, setFilter] = useState<'all' | 'resolu'>('all');
+
+  useEffect(() => {
+    console.log('[NavTrace] AdminAlertsScreen mounted');
+  }, []);
 
   const fetchAlerts = async () => {
     try {
@@ -27,16 +36,16 @@ export default function AdminAlertsScreen() {
         .select(`
           *,
           agents:agent_id (
-            users:user_id (nom)
+            users:users!agents_user_id_fkey (nom)
           ),
           clients:client_id (
-            users:user_id (nom)
+            users:users!clients_user_id_fkey (nom)
           )
         `)
         .order('created_at', { ascending: false });
 
-      if (filter !== 'all') {
-        query = query.eq('statut', filter);
+      if (filter === 'resolu') {
+        query = query.eq('statut', 'resolu');
       }
 
       const { data, error } = await query;
@@ -55,24 +64,26 @@ export default function AdminAlertsScreen() {
     }
   };
 
+  // Fetch alerts when filter changes
   useEffect(() => {
     fetchAlerts();
+  }, [filter]);
 
-    // Subscribe to real-time updates
+  // Stable realtime subscription (subscribe once)
+  useEffect(() => {
     const channel = supabase
       .channel('admin_alerts')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'sos_alerts' },
-        () => {
-          fetchAlerts();
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sos_alerts' }, () => {
+        fetchAlerts();
+      })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      try {
+        supabase.removeChannel(channel);
+      } catch {}
     };
-  }, [filter]);
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -183,6 +194,34 @@ export default function AdminAlertsScreen() {
     return 'Inconnu';
   };
 
+  const toNumber = (value: any) => {
+    const num = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  const openInMaps = (latitude: any, longitude: any) => {
+    const latNum = toNumber(latitude);
+    const lngNum = toNumber(longitude);
+    if (latNum === null || lngNum === null) {
+      return;
+    }
+    const lat = String(latNum);
+    const lng = String(lngNum);
+    const label = 'Position SOS';
+    const scheme = Platform.select({ ios: 'maps:0,0?q=', android: 'geo:0,0?q=' });
+    const url = Platform.select({
+      ios: `${scheme}${encodeURIComponent(label)}@${lat},${lng}`,
+      android: `${scheme}${lat},${lng}(${encodeURIComponent(label)})`,
+      default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+    });
+    if (url) {
+      Linking.openURL(url).catch(() => {
+        const fallback = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        Linking.openURL(fallback).catch(() => {});
+      });
+    }
+  };
+
   const filteredAlerts = alerts;
   const activeAlerts = alerts.filter(alert => alert.statut === 'en_cours').length;
 
@@ -198,10 +237,10 @@ export default function AdminAlertsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-primary-900 px-6 py-8">
-        <Text className="text-white text-2xl font-bold">Alertes SOS</Text>
-        <Text className="text-primary-100 mt-1">
+      {/* Header - style clair */}
+      <View className="bg-white px-6 py-6 border-b border-gray-100">
+        <Text className="text-2xl font-bold text-gray-900">Alertes SOS</Text>
+        <Text className="text-gray-500 mt-1">
           {activeAlerts} alerte{activeAlerts > 1 ? 's' : ''} active{activeAlerts > 1 ? 's' : ''}
         </Text>
       </View>
@@ -224,20 +263,6 @@ export default function AdminAlertsScreen() {
             </Text>
           </TouchableOpacity>
           
-          <TouchableOpacity
-            className={`px-4 py-2 rounded-full ${
-              filter === 'en_cours' ? 'bg-danger-500' : 'bg-gray-100'
-            }`}
-            onPress={() => setFilter('en_cours')}
-          >
-            <Text
-              className={`font-medium ${
-                filter === 'en_cours' ? 'text-white' : 'text-gray-600'
-              }`}
-            >
-              En cours
-            </Text>
-          </TouchableOpacity>
           
           <TouchableOpacity
             className={`px-4 py-2 rounded-full ${
@@ -267,13 +292,10 @@ export default function AdminAlertsScreen() {
             <View className="bg-white rounded-xl p-8 items-center shadow-sm">
               <Ionicons name="shield-checkmark" size={64} color="#10b981" />
               <Text className="text-gray-500 text-xl font-medium mt-4">
-                {filter === 'all' ? 'Aucune alerte' : 
-                 filter === 'en_cours' ? 'Aucune alerte active' : 'Aucune alerte résolue'}
+                {filter === 'all' ? 'Aucune alerte' : 'Aucune alerte résolue'}
               </Text>
               <Text className="text-gray-400 text-center mt-2">
-                {filter === 'all' ? 'Aucune alerte SOS n\'a été déclenchée' :
-                 filter === 'en_cours' ? 'Toutes les alertes ont été traitées' :
-                 'Aucune alerte n\'a encore été résolue'}
+                {filter === 'all' ? 'Aucune alerte SOS n\'a été déclenchée' : 'Aucune alerte n\'a encore été résolue'}
               </Text>
             </View>
           ) : (
@@ -317,14 +339,25 @@ export default function AdminAlertsScreen() {
                     </View>
                   )}
 
-                  {(alert.latitude && alert.longitude) && (
+                  {(() => {
+                    const latNum = toNumber(alert.latitude);
+                    const lngNum = toNumber(alert.longitude);
+                    const hasCoords = latNum !== null && lngNum !== null;
+                    return hasCoords ? (
                     <View className="flex-row items-center mb-4">
                       <Ionicons name="location" size={16} color="#6b7280" />
                       <Text className="text-gray-500 text-sm ml-2">
-                        Position: {alert.latitude.toFixed(6)}, {alert.longitude.toFixed(6)}
+                        Position: {latNum!.toFixed(6)}, {lngNum!.toFixed(6)}
                       </Text>
+                      <TouchableOpacity
+                        className="ml-3 px-3 py-1 rounded-lg bg-primary-900"
+                        onPress={() => openInMaps(latNum, lngNum)}
+                      >
+                        <Text className="text-white text-sm font-medium">Ouvrir dans Maps</Text>
+                      </TouchableOpacity>
                     </View>
-                  )}
+                    ) : null;
+                  })()}
 
                   {alert.statut === 'en_cours' && (
                     <View className="flex-row space-x-3 pt-4 border-t border-gray-100">

@@ -11,6 +11,9 @@ Notifications.setNotificationHandler({
     shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: false,
+    // SDK 53 types require these fields
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -70,8 +73,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     });
 
     return () => {
-      Notifications.removeNotificationSubscription(notificationListener);
-      Notifications.removeNotificationSubscription(responseListener);
+      try { (notificationListener as any)?.remove?.(); } catch {}
+      try { (responseListener as any)?.remove?.(); } catch {}
     };
   }, [user]);
 
