@@ -1,18 +1,31 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
 import AdminAgentsScreen from '../screens/admin/AdminAgentsScreen';
 import AdminAlertsScreen from '../screens/admin/AdminAlertsScreen';
 import AdminAnnouncesScreen from '../screens/admin/AdminAnnouncesScreen';
+import AdminClientsScreen from '../screens/admin/AdminClientsScreen';
 import AdminProfileScreen from '../screens/admin/AdminProfileScreen';
 import ClientScannerScreen from '../screens/client/ClientScannerScreen';
 
-const Tab = createBottomTabNavigator();
+type AdminTabParamList = {
+  Dashboard: undefined;
+  Agents: undefined;
+  Alerts: undefined;
+  Announces: undefined;
+  Scanner: undefined;
+  Profile: undefined;
+};
 
-export default function AdminNavigator() {
+const Tab = createBottomTabNavigator<AdminTabParamList>();
+const Stack = createStackNavigator();
+
+function AdminTabs() {
   return (
     <Tab.Navigator
+      id={undefined}
       screenOptions={({ route }) => ({
         tabBarIcon: ({ focused, color, size }) => {
           let iconName: keyof typeof Ionicons.glyphMap;
@@ -71,5 +84,14 @@ export default function AdminNavigator() {
         options={{ title: 'Profil' }}
       />
     </Tab.Navigator>
+  );
+}
+
+export default function AdminNavigator() {
+  return (
+    <Stack.Navigator id={undefined} screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="AdminTabs" component={AdminTabs} />
+      <Stack.Screen name="Clients" component={AdminClientsScreen} />
+    </Stack.Navigator>
   );
 }

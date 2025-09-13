@@ -147,36 +147,36 @@ export default function ClientDashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
-        <View className="bg-primary-900 px-6 py-8">
-          <Text className="text-white text-2xl font-bold">
+        {/* Header - style clair */}
+        <View className="bg-white px-6 py-6 border-b border-gray-100">
+          <Text className="text-2xl font-bold text-gray-900">
             Bonjour, {userProfile?.nom}
           </Text>
-          <Text className="text-primary-100 mt-1">Espace client</Text>
+          <Text className="text-gray-500 mt-1">Espace client</Text>
         </View>
 
         <View className="px-6 py-6 space-y-6">
-          {/* Quick Stats */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
+          {/* Quick Stats - Optimisé */}
+          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <Text className="text-lg font-semibold text-gray-900 mb-4">
               Statistiques
             </Text>
-            <View className="flex-row justify-between">
-              <View className="items-center">
+            <View className="flex-row justify-between space-x-4">
+              <View className="flex-1 items-center bg-blue-50 rounded-lg p-3">
                 <Text className="text-2xl font-bold text-primary-900">
                   {recentScans.length}
                 </Text>
-                <Text className="text-gray-600 text-sm">Scans effectués</Text>
+                <Text className="text-gray-600 text-sm font-medium">Scans effectués</Text>
               </View>
-              <View className="items-center">
+              <View className="flex-1 items-center bg-green-50 rounded-lg p-3">
                 <Text className="text-2xl font-bold text-success-600">
                   {recentScans.filter(scan => scan.agent_status === 'disponible').length}
                 </Text>
-                <Text className="text-gray-600 text-sm">Agents disponibles</Text>
+                <Text className="text-gray-600 text-sm font-medium">Agents disponibles</Text>
               </View>
-              <View className="items-center">
+              <View className="flex-1 items-center bg-yellow-50 rounded-lg p-3">
                 <Text className="text-2xl font-bold text-warning-600">0</Text>
-                <Text className="text-gray-600 text-sm">Alertes actives</Text>
+                <Text className="text-gray-600 text-sm font-medium">Alertes actives</Text>
               </View>
             </View>
           </View>
@@ -198,21 +198,25 @@ export default function ClientDashboardScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Quick Actions */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
+          {/* Quick Actions - Optimisé */}
+          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <Text className="text-lg font-semibold text-gray-900 mb-4">
               Actions rapides
             </Text>
             <View className="space-y-3">
-              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg">
-                <Ionicons name="qr-code" size={24} color="#1e3a8a" />
-                <Text className="text-gray-900 ml-3 font-medium">
+              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <View className="bg-blue-50 p-2 rounded-lg mr-3">
+                  <Ionicons name="qr-code" size={20} color="#1e3a8a" />
+                </View>
+                <Text className="text-gray-900 font-medium">
                   Scanner un agent
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg">
-                <Ionicons name="list" size={24} color="#1e3a8a" />
-                <Text className="text-gray-900 ml-3 font-medium">
+              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <View className="bg-blue-50 p-2 rounded-lg mr-3">
+                  <Ionicons name="list" size={20} color="#1e3a8a" />
+                </View>
+                <Text className="text-gray-900 font-medium">
                   Voir l'historique
                 </Text>
               </TouchableOpacity>

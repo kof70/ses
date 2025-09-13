@@ -11,15 +11,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabase } from '../../contexts/SupabaseContext';
+import * as Location from 'expo-location';
 
 export default function ClientProfileScreen() {
-  const { userProfile, signOut, refreshProfile } = useAuth();
+  const { userProfile, signOut, refreshProfile, offlineReadOnly, assertOnlineOrThrow } = useAuth();
   const supabase = useSupabase();
   const [clientData, setClientData] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [nom, setNom] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [zones, setZones] = useState<any[]>([]);
+  const [selectedZoneIds, setSelectedZoneIds] = useState<string[]>([]);
 
   const fetchClientData = async () => {
     if (!userProfile) return;
@@ -47,12 +50,36 @@ export default function ClientProfileScreen() {
 
   useEffect(() => {
     fetchClientData();
+    (async () => {
+      try {
+        const { data: zonesData } = await supabase
+          .from('zones')
+          .select('*')
+          .order('name', { ascending: true });
+        setZones(zonesData || []);
+
+        if (userProfile?.id) {
+          const { data: cz } = await supabase
+            .from('client_zones')
+            .select('zone_id')
+            .eq('client_user_id', userProfile.id);
+          setSelectedZoneIds((cz || []).map((r: any) => r.zone_id));
+        }
+      } catch (e) {
+        console.warn('Failed to load zones', e);
+      }
+    })();
   }, [userProfile]);
 
   const handleSave = async () => {
     setSaving(true);
     
     try {
+      if (offlineReadOnly) {
+        Alert.alert('Hors ligne', 'Mode lecture seule. Revenir en ligne pour modifier.');
+        return;
+      }
+      assertOnlineOrThrow();
       // Update user profile
       const { error: userError } = await supabase
         .from('users')
@@ -63,6 +90,36 @@ export default function ClientProfileScreen() {
         throw userError;
       }
 
+      // Persist client zones: simple replace strategy
+      if (userProfile?.id) {
+        const clientId = userProfile.id;
+        // Fetch current
+        const { data: current } = await supabase
+          .from('client_zones')
+          .select('zone_id')
+          .eq('client_user_id', clientId);
+        const currentIds = new Set((current || []).map((r: any) => r.zone_id));
+        const nextIds = new Set(selectedZoneIds);
+
+        const toInsert = [...nextIds].filter((id) => !currentIds.has(id));
+        const toDelete = [...currentIds].filter((id) => !nextIds.has(id));
+
+        if (toInsert.length) {
+          await supabase
+            .from('client_zones')
+            .insert(toInsert.map((zoneId) => ({ client_user_id: clientId, zone_id: zoneId })));
+        }
+        if (toDelete.length) {
+          for (const zoneId of toDelete) {
+            await supabase
+              .from('client_zones')
+              .delete()
+              .eq('client_user_id', clientId)
+              .eq('zone_id', zoneId);
+          }
+        }
+      }
+
       await refreshProfile();
       setEditing(false);
       Alert.alert('Succès', 'Profil mis à jour avec succès');
@@ -71,6 +128,29 @@ export default function ClientProfileScreen() {
       Alert.alert('Erreur', 'Impossible de mettre à jour le profil');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSavePosition = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission requise', 'Autorisez l\'accès à la localisation.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({});
+      await supabase
+        .from('clients')
+        .update({
+          last_latitude: loc.coords.latitude,
+          last_longitude: loc.coords.longitude,
+          last_position_at: new Date().toISOString(),
+        })
+        .eq('user_id', userProfile?.id);
+      Alert.alert('Succès', 'Position enregistrée.');
+    } catch (e) {
+      console.error('Failed to save position', e);
+      Alert.alert('Erreur', 'Impossible d\'enregistrer la position');
     }
   };
 
@@ -100,15 +180,15 @@ export default function ClientProfileScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       <ScrollView>
-        {/* Header */}
-        <View className="bg-primary-900 px-6 py-8">
+        {/* Header - style clair */}
+        <View className="bg-white px-6 py-6 border-b border-gray-100">
           <View className="flex-row items-center justify-between">
             <View>
-              <Text className="text-white text-2xl font-bold">Mon Profil</Text>
-              <Text className="text-primary-100 mt-1">Espace client</Text>
+              <Text className="text-2xl font-bold text-gray-900">Mon Profil</Text>
+              <Text className="text-gray-500 mt-1">Espace client</Text>
             </View>
             <TouchableOpacity
-              className="bg-primary-800 p-3 rounded-full"
+              className="bg-gray-900 p-3 rounded-full"
               onPress={() => setEditing(!editing)}
             >
               <Ionicons 
@@ -121,18 +201,18 @@ export default function ClientProfileScreen() {
         </View>
 
         <View className="px-6 py-6 space-y-6">
-          {/* Profile Info */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
+          {/* Profile Info - Optimisé */}
+          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <Text className="text-lg font-semibold text-gray-900 mb-4">
               Informations personnelles
             </Text>
             
             <View className="space-y-4">
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Nom complet</Text>
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Nom complet</Text>
                 {editing ? (
                   <TextInput
-                    className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-2"
+                    className="bg-white border border-gray-300 rounded-lg px-3 py-2 mt-1"
                     value={nom}
                     onChangeText={setNom}
                     placeholder="Votre nom complet"
@@ -142,21 +222,47 @@ export default function ClientProfileScreen() {
                 )}
               </View>
               
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Email</Text>
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Email</Text>
                 <Text className="text-gray-900 font-medium">{userProfile?.email}</Text>
               </View>
               
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Rôle</Text>
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Rôle</Text>
                 <Text className="text-gray-900 font-medium capitalize">{userProfile?.role}</Text>
               </View>
               
-              <View>
-                <Text className="text-gray-600 text-sm mb-1">Statut du compte</Text>
+              <View className="bg-gray-50 rounded-lg p-3">
+                <Text className="text-gray-600 text-sm mb-1 font-medium">Statut du compte</Text>
                 <Text className="text-gray-900 font-medium capitalize">{userProfile?.statut}</Text>
               </View>
             </View>
+          </View>
+
+          {/* Zones d'intervention */}
+          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <Text className="text-lg font-semibold text-gray-900 mb-4">Zones d'intervention</Text>
+            <View className="flex-row flex-wrap">
+              {zones.map((z: any) => {
+                const selected = selectedZoneIds.includes(z.id);
+                return (
+                  <TouchableOpacity
+                    key={z.id}
+                    className={`mr-2 mb-2 px-3 py-2 rounded-full border ${selected ? 'bg-primary-900 border-primary-900' : 'bg-gray-50 border-gray-300'}`}
+                    onPress={() => {
+                      setSelectedZoneIds((prev) =>
+                        prev.includes(z.id) ? prev.filter((id) => id !== z.id) : [...prev, z.id]
+                      );
+                    }}
+                  >
+                    <Text className={`text-sm ${selected ? 'text-white' : 'text-gray-700'}`}>{z.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {editing && (
+              <Text className="text-gray-500 text-xs mt-2">Touchez pour sélectionner/désélectionner vos zones.</Text>
+            )}
           </View>
 
           {/* Statistics */}
@@ -192,11 +298,9 @@ export default function ClientProfileScreen() {
           {/* Save Button */}
           {editing && (
             <TouchableOpacity
-              className={`bg-primary-900 rounded-xl p-4 items-center ${
-                saving ? 'opacity-50' : ''
-              }`}
+              className={`rounded-xl p-4 items-center ${offlineReadOnly ? 'bg-gray-300' : 'bg-primary-900'} ${saving ? 'opacity-50' : ''}`}
               onPress={handleSave}
-              disabled={saving}
+              disabled={saving || offlineReadOnly}
             >
               <Text className="text-white font-semibold text-lg">
                 {saving ? 'Enregistrement...' : 'Enregistrer les modifications'}
@@ -211,6 +315,13 @@ export default function ClientProfileScreen() {
             </Text>
             
             <View className="space-y-3">
+              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg" onPress={handleSavePosition}>
+                <Ionicons name="location" size={24} color="#6b7280" />
+                <Text className="text-gray-700 ml-3 font-medium">
+                  Partager ma position (assignation)
+                </Text>
+              </TouchableOpacity>
+              
               <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg">
                 <Ionicons name="notifications" size={24} color="#6b7280" />
                 <Text className="text-gray-700 ml-3 font-medium">
@@ -244,11 +355,13 @@ export default function ClientProfileScreen() {
             </View>
           </View>
 
-          {/* App Info */}
-          <View className="bg-blue-50 rounded-xl p-6">
+          {/* App Info - Optimisé */}
+          <View className="bg-blue-50 rounded-xl p-5 border border-blue-100">
             <View className="flex-row items-start">
-              <Ionicons name="information-circle" size={24} color="#3b82f6" />
-              <View className="ml-3 flex-1">
+              <View className="bg-blue-100 p-2 rounded-lg mr-3">
+                <Ionicons name="information-circle" size={20} color="#3b82f6" />
+              </View>
+              <View className="flex-1">
                 <Text className="text-blue-900 font-semibold mb-2">
                   SecureGuard Pro
                 </Text>

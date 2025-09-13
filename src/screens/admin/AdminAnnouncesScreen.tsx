@@ -171,18 +171,18 @@ export default function AdminAnnouncesScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View className="bg-primary-900 px-6 py-8">
+      {/* Header - style clair */}
+      <View className="bg-white px-6 py-6 border-b border-gray-100">
         <View className="flex-row items-center justify-between">
           <View>
-            <Text className="text-white text-2xl font-bold">Annonces</Text>
-            <Text className="text-primary-100 mt-1">
+            <Text className="text-2xl font-bold text-gray-900">Annonces</Text>
+            <Text className="text-gray-500 mt-1">
               {annonces.length} annonce{annonces.length > 1 ? 's' : ''} publiée{annonces.length > 1 ? 's' : ''}
             </Text>
           </View>
           
           <TouchableOpacity
-            className="bg-primary-800 p-3 rounded-full"
+            className="bg-gray-900 p-3 rounded-full"
             onPress={() => setModalVisible(true)}
           >
             <Ionicons name="add" size={24} color="white" />

@@ -159,18 +159,18 @@ export default function AgentDashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {/* Header */}
-        <View className="bg-primary-900 px-6 py-8">
-          <Text className="text-white text-2xl font-bold">
+        {/* Header - style clair */}
+        <View className="bg-white px-6 py-6 border-b border-gray-100">
+          <Text className="text-2xl font-bold text-gray-900">
             Bonjour, {userProfile?.nom}
           </Text>
-          <Text className="text-primary-100 mt-1">Agent de sécurité</Text>
+          <Text className="text-gray-500 mt-1">Agent de sécurité</Text>
         </View>
 
         <View className="px-6 py-6 space-y-6">
-          {/* Status Card */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
-            <View className="flex-row items-center justify-between mb-4">
+          {/* Status Card - Optimisé */}
+          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <View className="flex-row items-center justify-between mb-3">
               <Text className="text-lg font-semibold text-gray-900">Statut actuel</Text>
               <View
                 className={`px-3 py-1 rounded-full ${getStatusColor(
@@ -184,28 +184,30 @@ export default function AgentDashboardScreen() {
             </View>
             
             {agentData?.zone_assignee && (
-              <View className="flex-row items-center">
-                <Ionicons name="location" size={20} color="#6b7280" />
-                <Text className="text-gray-600 ml-2">Zone: {agentData.zone_assignee}</Text>
+              <View className="flex-row items-center bg-gray-50 rounded-lg p-3">
+                <Ionicons name="location" size={18} color="#6b7280" />
+                <Text className="text-gray-600 ml-2 font-medium">Zone: {agentData.zone_assignee}</Text>
               </View>
             )}
           </View>
 
-          {/* QR Code Card */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
+          {/* QR Code Card - Optimisé */}
+          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <Text className="text-lg font-semibold text-gray-900 mb-4 text-center">
               Mon QR Code
             </Text>
             <View className="items-center">
               {agentData?.qr_code && (
-                <QRCode
-                  value={agentData.qr_code}
-                  size={200}
-                  backgroundColor="white"
-                  color="black"
-                />
+                <View className="bg-gray-50 p-4 rounded-xl">
+                  <QRCode
+                    value={agentData.qr_code}
+                    size={180}
+                    backgroundColor="white"
+                    color="black"
+                  />
+                </View>
               )}
-              <Text className="text-gray-500 text-sm mt-4 text-center">
+              <Text className="text-gray-500 text-sm mt-3 text-center">
                 Les clients peuvent scanner ce code pour vérifier votre statut
               </Text>
             </View>
@@ -228,21 +230,25 @@ export default function AgentDashboardScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Quick Actions */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
+          {/* Quick Actions - Optimisé */}
+          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
             <Text className="text-lg font-semibold text-gray-900 mb-4">
               Actions rapides
             </Text>
             <View className="space-y-3">
-              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg">
-                <Ionicons name="time" size={24} color="#1e3a8a" />
-                <Text className="text-gray-900 ml-3 font-medium">
+              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <View className="bg-blue-50 p-2 rounded-lg mr-3">
+                  <Ionicons name="time" size={20} color="#1e3a8a" />
+                </View>
+                <Text className="text-gray-900 font-medium">
                   Gérer mes horaires
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg">
-                <Ionicons name="notifications" size={24} color="#1e3a8a" />
-                <Text className="text-gray-900 ml-3 font-medium">
+              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                <View className="bg-blue-50 p-2 rounded-lg mr-3">
+                  <Ionicons name="notifications" size={20} color="#1e3a8a" />
+                </View>
+                <Text className="text-gray-900 font-medium">
                   Voir les annonces
                 </Text>
               </TouchableOpacity>
