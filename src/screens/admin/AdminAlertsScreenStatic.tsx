@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSupabase } from '../../contexts/SupabaseContext';
 import AdminAlertsScreenWithData from './AdminAlertsScreenWithData';
 
-export default function AdminAlertsScreen() {
+export default function AdminAlertsScreenStatic() {
   const { userProfile } = useAuth();
   const supabase = useSupabase();
   

@@ -6,6 +6,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,34 +20,62 @@ export default function AdminClientsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'en_attente' | 'actif' | 'inactif'>('all');
+  const [agents, setAgents] = useState<any[]>([]);
+  const [assignModalVisible, setAssignModalVisible] = useState(false);
+  const [selectedClientUserId, setSelectedClientUserId] = useState<string | null>(null);
 
   const fetchClients = async () => {
     try {
-      const { data, error } = await supabase
+      // Get all users with role 'client' - this is the main data source
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select(`
+          id,
+          nom,
+          email,
+          role,
+          statut,
+          phone_number,
+          created_at
+        `)
+        .eq('role', 'client')
+        .order('created_at', { ascending: false });
+
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+        Alert.alert('Erreur', 'Impossible de charger les utilisateurs');
+        return;
+      }
+
+      console.log('🔍 AdminClientsScreen: Raw users data from DB:', usersData);
+
+      // Then get client-specific data (optional)
+      const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select(`
           user_id,
           last_latitude,
           last_longitude,
-          last_position_at,
-          users:users!clients_user_id_fkey (
-            id,
-            nom,
-            email,
-            role,
-            statut,
-            phone_number
-          )
-        `)
-        .order('last_position_at', { ascending: false });
+          last_position_at
+        `);
 
-      if (error) {
-        console.error('Error fetching clients:', error);
-        Alert.alert('Erreur', 'Impossible de charger les clients');
-        return;
+      if (clientsError) {
+        console.error('Error fetching clients data:', clientsError);
       }
 
-      setClients(data || []);
+      // Create the merged data - prioritize users data
+      const mergedData = (usersData || []).map(user => {
+        const clientData = (clientsData || []).find(c => c.user_id === user.id);
+        return {
+          user_id: user.id,
+          users: user,
+          ...clientData
+        };
+      });
+
+      console.log('🔍 AdminClientsScreen: Final merged data:', mergedData);
+      console.log('🔍 AdminClientsScreen: Users with statut en_attente:', mergedData.filter(c => c.users?.statut === 'en_attente'));
+      setClients(mergedData);
     } catch (error) {
       console.error('Error fetching clients:', error);
       Alert.alert('Erreur', 'Une erreur est survenue');
@@ -61,9 +90,90 @@ export default function AdminClientsScreen() {
     fetchClients();
   };
 
-  const handleAssignAgent = (client: any) => {
-    // TODO: Implémenter l'assignation d'agent
-    Alert.alert('Assignation', `Assigner un agent à ${client.users?.nom || 'ce client'}`);
+  const fetchAgents = async () => {
+    try {
+      // Get all users with role 'agent'
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select(`
+          id,
+          nom,
+          email,
+          role,
+          statut,
+          phone_number,
+          created_at
+        `)
+        .eq('role', 'agent')
+        .order('created_at', { ascending: false });
+
+      if (usersError) {
+        console.error('Error fetching agents:', usersError);
+        return;
+      }
+
+      // Then get agent-specific data
+      const { data: agentsData, error: agentsError } = await supabase
+        .from('agents')
+        .select(`
+          user_id,
+          disponibilite,
+          qr_code,
+          zone_assignee,
+          heure_arrivee,
+          heure_depart
+        `);
+
+      if (agentsError) {
+        console.error('Error fetching agents data:', agentsError);
+      }
+
+      // Merge the data
+      const mergedData = (usersData || []).map(user => {
+        const agentData = (agentsData || []).find(a => a.user_id === user.id);
+        return {
+          user_id: user.id,
+          users: user,
+          ...agentData
+        };
+      });
+
+      setAgents(mergedData);
+    } catch (error) {
+      console.error('Error fetching agents:', error);
+    }
+  };
+
+  const openAssignModal = (clientUserId: string) => {
+    setSelectedClientUserId(clientUserId);
+    setAssignModalVisible(true);
+  };
+
+  const assignAgentToClient = async (agentUserId: string) => {
+    try {
+      if (!selectedClientUserId) return;
+
+      const client = clients.find((c) => c.user_id === selectedClientUserId);
+      const latitude = client?.last_latitude ?? null;
+      const longitude = client?.last_longitude ?? null;
+
+      await supabase
+        .from('agent_client_assignments')
+        .insert({
+          agent_user_id: agentUserId,
+          client_user_id: selectedClientUserId,
+          latitude,
+          longitude,
+          statut: 'assigne',
+        });
+
+      Alert.alert('Succès', 'Agent assigné au client avec succès');
+      setAssignModalVisible(false);
+      setSelectedClientUserId(null);
+    } catch (error) {
+      console.error('Error assigning agent:', error);
+      Alert.alert('Erreur', 'Impossible d\'assigner l\'agent');
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -88,6 +198,7 @@ export default function AdminClientsScreen() {
 
   useEffect(() => {
     fetchClients();
+    fetchAgents();
   }, []);
 
   if (loading) {
@@ -106,6 +217,11 @@ export default function AdminClientsScreen() {
       <View className="bg-white px-6 py-6 border-b border-gray-100">
         <Text className="text-2xl font-bold text-gray-900">Gestion des clients</Text>
         <Text className="text-gray-500 mt-1">{clients.length} client(s) enregistré(s)</Text>
+        <Text className="text-xs text-gray-400 mt-1">
+          En attente: {clients.filter(c => c.users?.statut === 'en_attente').length} | 
+          Actifs: {clients.filter(c => c.users?.statut === 'actif').length} | 
+          Inactifs: {clients.filter(c => c.users?.statut === 'inactif').length}
+        </Text>
       </View>
 
       {/* Filtres de statut */}
@@ -226,7 +342,7 @@ export default function AdminClientsScreen() {
                     <>
                       <TouchableOpacity 
                         className="flex-1 bg-primary-50 p-3 rounded-lg items-center"
-                        onPress={() => handleAssignAgent(client)}
+                        onPress={() => openAssignModal(client.user_id)}
                       >
                         <Ionicons name="person-add" size={16} color="#1e3a8a" />
                         <Text className="text-primary-700 font-medium text-sm mt-1">Assigner agent</Text>
@@ -251,6 +367,32 @@ export default function AdminClientsScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Modal pour assigner un agent */}
+      <Modal visible={assignModalVisible} transparent animationType="slide" onRequestClose={() => setAssignModalVisible(false)}>
+        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <View className="bg-white p-4 rounded-t-2xl" style={{ maxHeight: '70%' }}>
+            <Text className="text-lg font-semibold mb-3">Sélectionner un agent</Text>
+            <ScrollView style={{ maxHeight: '60%' }}>
+              {agents
+                .filter(a => a.users?.statut === 'actif') // Only show active agents
+                .map((a) => (
+                <TouchableOpacity key={a.user_id} className="p-3 border-b border-gray-100" onPress={() => assignAgentToClient(a.user_id)}>
+                  <Text className="font-medium text-gray-900">{a.users?.nom || 'Nom non fourni'}</Text>
+                  <Text className="text-gray-500 text-sm">{a.users?.email}</Text>
+                  <Text className="text-gray-400 text-xs">Statut: {a.users?.statut} | Disponibilité: {a.disponibilite}</Text>
+                  {a.qr_code && (
+                    <Text className="text-gray-600 text-xs mt-1">QR: {a.qr_code}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity className="mt-3 self-end px-4 py-2 rounded-lg bg-gray-200" onPress={() => setAssignModalVisible(false)}>
+              <Text className="text-gray-700">Fermer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

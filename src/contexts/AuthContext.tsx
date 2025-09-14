@@ -331,49 +331,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (error) return { error };
 
     if (data.user) {
-      // Create user profile
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: data.user.id,
-          email,
-          nom,
-          phone_number: phoneNumber,
-          role,
-          statut: 'en_attente',
-        })
-        .single();
+      // Create user profile using the SQL function
+      const { data: profileData, error: profileError } = await supabase.rpc('create_user_profile', {
+        p_user_id: data.user.id,
+        p_user_email: email,
+        p_user_nom: nom,
+        p_user_phone: phoneNumber,
+        p_user_role: role,
+      });
 
       if (profileError) {
         console.error('Error creating user profile:', profileError);
         return { error: profileError };
       }
 
-      // Create role-specific record
-      if (role === 'agent') {
-        const qrCode = `agent_${data.user.id}_${Date.now()}`;
-        const { error: agentError } = await supabase
-          .from('agents')
-          .insert({
-            user_id: data.user.id,
-            disponibilite: 'disponible',
-            qr_code: qrCode,
-          });
-
-        if (agentError) {
-          console.error('Error creating agent record:', agentError);
-        }
-      } else if (role === 'client') {
-        const { error: clientError } = await supabase
-          .from('clients')
-          .insert({
-            user_id: data.user.id,
-            historique_scans: [],
-          });
-
-        if (clientError) {
-          console.error('Error creating client record:', clientError);
-        }
+      if (!profileData?.success) {
+        console.error('Profile creation failed:', profileData);
+        return { error: { message: 'Failed to create user profile' } };
       }
     }
 

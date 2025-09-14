@@ -63,11 +63,11 @@ function AdminTabs() {
         component={AdminAgentsScreen}
         options={{ title: 'Agents' }}
       />
-      <Tab.Screen 
-        name="Alerts" 
-        component={AdminAlertsScreen}
-        options={{ title: 'Alertes' }}
-      />
+            <Tab.Screen
+              name="Alerts"
+              component={AdminAlertsScreen}
+              options={{ title: 'Alertes' }}
+            />
       <Tab.Screen 
         name="Announces" 
         component={AdminAnnouncesScreen}

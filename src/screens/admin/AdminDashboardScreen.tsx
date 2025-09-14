@@ -161,8 +161,8 @@ export default function AdminDashboardScreen() {
         .insert({
           agent_user_id: selectedAgent,
           client_user_id: selectedClient,
-          status: 'active',
-          assigned_at: new Date().toISOString(),
+          statut: 'assigne',
+          created_at: new Date().toISOString(),
         });
 
       if (error) {
@@ -210,8 +210,116 @@ export default function AdminDashboardScreen() {
     }
   };
 
+  const fetchAgentsForAssignment = async () => {
+    try {
+      // Get all users with role 'agent'
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select(`
+          id,
+          nom,
+          email,
+          role,
+          statut,
+          phone_number,
+          created_at
+        `)
+        .eq('role', 'agent')
+        .order('created_at', { ascending: false });
+
+      if (usersError) {
+        console.error('Error fetching agents:', usersError);
+        return;
+      }
+
+      // Then get agent-specific data
+      const { data: agentsData, error: agentsError } = await supabase
+        .from('agents')
+        .select(`
+          user_id,
+          disponibilite,
+          qr_code,
+          zone_assignee,
+          heure_arrivee,
+          heure_depart
+        `);
+
+      if (agentsError) {
+        console.error('Error fetching agents data:', agentsError);
+      }
+
+      // Merge the data
+      const mergedData = (usersData || []).map(user => {
+        const agentData = (agentsData || []).find(a => a.user_id === user.id);
+        return {
+          user_id: user.id,
+          users: user,
+          ...agentData
+        };
+      });
+
+      setAgents(mergedData);
+    } catch (error) {
+      console.error('Error fetching agents:', error);
+    }
+  };
+
+  const fetchClientsForAssignment = async () => {
+    try {
+      // Get all users with role 'client'
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select(`
+          id,
+          nom,
+          email,
+          role,
+          statut,
+          phone_number,
+          created_at
+        `)
+        .eq('role', 'client')
+        .order('created_at', { ascending: false });
+
+      if (usersError) {
+        console.error('Error fetching clients:', usersError);
+        return;
+      }
+
+      // Then get client-specific data
+      const { data: clientsData, error: clientsError } = await supabase
+        .from('clients')
+        .select(`
+          user_id,
+          last_latitude,
+          last_longitude,
+          last_position_at
+        `);
+
+      if (clientsError) {
+        console.error('Error fetching clients data:', clientsError);
+      }
+
+      // Merge the data
+      const mergedData = (usersData || []).map(user => {
+        const clientData = (clientsData || []).find(c => c.user_id === user.id);
+        return {
+          user_id: user.id,
+          users: user,
+          ...clientData
+        };
+      });
+
+      setClients(mergedData);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
+    fetchAgentsForAssignment();
+    fetchClientsForAssignment();
 
     // Subscribe to real-time updates for SOS alerts
     const channel = supabase
@@ -513,7 +621,9 @@ export default function AdminDashboardScreen() {
                     style={{ height: 50 }}
                   >
                     <Picker.Item label="Choisir un agent..." value="" />
-                    {agents.map((agent) => (
+                    {agents
+                      .filter(agent => agent.users?.statut === 'actif')
+                      .map((agent) => (
                       <Picker.Item
                         key={agent.user_id}
                         label={`${agent.users?.nom || 'Sans nom'} (${agent.disponibilite})`}
@@ -534,7 +644,9 @@ export default function AdminDashboardScreen() {
                     style={{ height: 50 }}
                   >
                     <Picker.Item label="Choisir un client..." value="" />
-                    {clients.map((client) => (
+                    {clients
+                      .filter(client => client.users?.statut === 'actif')
+                      .map((client) => (
                       <Picker.Item
                         key={client.user_id}
                         label={`${client.users?.nom || 'Sans nom'}${client.last_latitude ? ' (Position connue)' : ' (Pas de position)'}`}

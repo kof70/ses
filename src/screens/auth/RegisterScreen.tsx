@@ -76,7 +76,7 @@ export default function RegisterScreen({ navigation }: any) {
     } else {
       Alert.alert(
         'Inscription réussie',
-        'Votre compte a été créé avec succès. Vous pouvez maintenant vous connecter.',
+        'Votre compte a été créé avec succès. Votre demande est en cours d\'examen par l\'administration. Vous recevrez une notification une fois approuvé.',
         [{ text: 'OK', onPress: () => navigation.navigate('Login') }]
       );
     }
@@ -131,7 +131,7 @@ export default function RegisterScreen({ navigation }: any) {
                 <Text className="text-gray-700 mb-2 font-medium">Numéro de téléphone</Text>
                 <TextInput
                   className="bg-gray-50 border border-gray-300 rounded-lg px-4 py-3 text-base"
-                  placeholder="+33 6 12 34 56 78"
+                  placeholder="+228 00 00 00 00"
                   value={phoneNumber}
                   onChangeText={setPhoneNumber}
                   keyboardType="phone-pad"

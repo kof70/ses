@@ -12,12 +12,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabase } from '../../contexts/SupabaseContext';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 
 export default function ClientDashboardScreen() {
   const { userProfile } = useAuth();
   const supabase = useSupabase();
   const { sendNotification } = useNotifications();
+  const navigation: any = useNavigation();
   const [clientData, setClientData] = useState<any>(null);
   const [recentScans, setRecentScans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -204,7 +206,10 @@ export default function ClientDashboardScreen() {
               Actions rapides
             </Text>
             <View className="space-y-3">
-              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <TouchableOpacity 
+                className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100"
+                onPress={() => navigation.navigate('Scanner')}
+              >
                 <View className="bg-blue-50 p-2 rounded-lg mr-3">
                   <Ionicons name="qr-code" size={20} color="#1e3a8a" />
                 </View>
@@ -212,7 +217,10 @@ export default function ClientDashboardScreen() {
                   Scanner un agent
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <TouchableOpacity 
+                className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100"
+                onPress={() => navigation.navigate('History')}
+              >
                 <View className="bg-blue-50 p-2 rounded-lg mr-3">
                   <Ionicons name="list" size={20} color="#1e3a8a" />
                 </View>

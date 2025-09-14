@@ -13,12 +13,14 @@ import QRCode from 'react-native-qrcode-svg';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabase } from '../../contexts/SupabaseContext';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 
 export default function AgentDashboardScreen() {
   const { userProfile } = useAuth();
   const supabase = useSupabase();
   const { sendNotification } = useNotifications();
+  const navigation: any = useNavigation();
   const [agentData, setAgentData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -236,7 +238,10 @@ export default function AgentDashboardScreen() {
               Actions rapides
             </Text>
             <View className="space-y-3">
-              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <TouchableOpacity 
+                className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100"
+                onPress={() => navigation.navigate('Time')}
+              >
                 <View className="bg-blue-50 p-2 rounded-lg mr-3">
                   <Ionicons name="time" size={20} color="#1e3a8a" />
                 </View>
@@ -244,7 +249,10 @@ export default function AgentDashboardScreen() {
                   Gérer mes horaires
                 </Text>
               </TouchableOpacity>
-              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+              <TouchableOpacity 
+                className="flex-row items-center p-3 bg-gray-50 rounded-lg border border-gray-100"
+                onPress={() => navigation.navigate('Announces')}
+              >
                 <View className="bg-blue-50 p-2 rounded-lg mr-3">
                   <Ionicons name="notifications" size={20} color="#1e3a8a" />
                 </View>

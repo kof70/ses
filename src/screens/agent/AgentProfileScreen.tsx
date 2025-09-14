@@ -280,7 +280,7 @@ export default function AgentProfileScreen() {
             </Text>
             
             <View className="space-y-3">
-              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg">
+              {/* <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg">
                 <Ionicons name="notifications" size={24} color="#6b7280" />
                 <Text className="text-gray-700 ml-3 font-medium">
                   Paramètres de notification
@@ -292,7 +292,7 @@ export default function AgentProfileScreen() {
                 <Text className="text-gray-700 ml-3 font-medium">
                   Aide et support
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
               
               <TouchableOpacity 
                 className="flex-row items-center p-3 bg-red-50 rounded-lg"
@@ -303,6 +303,26 @@ export default function AgentProfileScreen() {
                   Se déconnecter
                 </Text>
               </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* App Info - Optimisé */}
+          <View className="bg-blue-50 rounded-xl p-5 border border-blue-100">
+            <View className="flex-row items-start">
+              <View className="bg-blue-100 p-2 rounded-lg mr-3">
+                <Ionicons name="information-circle" size={20} color="#3b82f6" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-blue-900 font-semibold mb-2">
+                  SES
+                </Text>
+                <Text className="text-blue-800 text-sm leading-5">
+                  Version 1.0.0{'\n'}
+                  Développé par Rekap{'\n'}
+                  Contact: djakpakoffi7029@gmail.com{'\n'}
+                  Application de sécurité mobile pour la vérification et le suivi des agents de sécurité.
+                </Text>
+              </View>
             </View>
           </View>
         </View>

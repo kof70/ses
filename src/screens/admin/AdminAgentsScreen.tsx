@@ -29,27 +29,57 @@ export default function AdminAgentsScreen() {
 
   const fetchAgents = async () => {
     try {
-      const { data, error } = await supabase
-        .from('agents')
+      // First, get all users with role 'agent' OR 'admin' (admins who were agents)
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
         .select(`
-          *,
-          users:users!agents_user_id_fkey (
             id,
             nom,
             email,
+          role,
             statut,
-            role
-          )
+          phone_number,
+          created_at
         `)
+        .in('role', ['agent', 'admin'])
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching agents:', error);
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+        Alert.alert('Erreur', 'Impossible de charger les utilisateurs');
         return;
       }
 
-      const list = data || [];
-      setAgents(list);
+      // Then get agent-specific data
+      const { data: agentsData, error: agentsError } = await supabase
+        .from('agents')
+        .select(`
+          user_id,
+          disponibilite,
+          qr_code,
+          zone_assignee,
+          heure_arrivee,
+          heure_depart
+        `);
+
+      if (agentsError) {
+        console.error('Error fetching agents data:', agentsError);
+      }
+
+      // Merge the data
+      const mergedData = (usersData || []).map(user => {
+        const agentData = (agentsData || []).find(a => a.user_id === user.id);
+        return {
+          user_id: user.id,
+          users: user,
+          ...agentData
+        };
+      });
+
+      console.log('🔍 AdminAgentsScreen: Raw users data from DB:', usersData);
+      console.log('🔍 AdminAgentsScreen: Final merged data:', mergedData);
+      console.log('🔍 AdminAgentsScreen: Users with statut en_attente:', mergedData.filter(a => a.users?.statut === 'en_attente'));
+      setAgents(mergedData);
 
       const { data: zonesData } = await supabase
         .from('zones')
@@ -61,7 +91,7 @@ export default function AdminAgentsScreen() {
       );
       setZones(deduped);
 
-      const agentUserIds = (list || []).map((a: any) => a.user_id);
+      const agentUserIds = (agents || []).map((a: any) => a.user_id);
       if (agentUserIds.length) {
         const { data: az } = await supabase
           .from('agent_zones')
@@ -85,11 +115,56 @@ export default function AdminAgentsScreen() {
   };
 
   const fetchClients = async () => {
-    const { data } = await supabase
-      .from('clients')
-      .select('user_id, last_latitude, last_longitude, users:users!clients_user_id_fkey(id, nom, email)')
-      .order('created_at', { ascending: false });
-    setClients(data || []);
+    try {
+      // Get all users with role 'client' - this is the main data source
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select(`
+          id,
+          nom,
+          email,
+          role,
+          statut,
+          phone_number,
+          created_at
+        `)
+        .eq('role', 'client')
+        .order('created_at', { ascending: false });
+
+      if (usersError) {
+        console.error('Error fetching users:', usersError);
+        return;
+      }
+
+      // Then get client-specific data (optional)
+      const { data: clientsData, error: clientsError } = await supabase
+        .from('clients')
+        .select(`
+          user_id,
+          last_latitude,
+          last_longitude,
+          last_position_at
+        `);
+
+      if (clientsError) {
+        console.error('Error fetching clients data:', clientsError);
+      }
+
+      // Create the merged data - prioritize users data
+      const mergedData = (usersData || []).map(user => {
+        const clientData = (clientsData || []).find(c => c.user_id === user.id);
+        return {
+          user_id: user.id,
+          users: user,
+          ...clientData
+        };
+      });
+
+      console.log('🔍 AdminAgentsScreen fetchClients: Final merged data:', mergedData);
+      setClients(mergedData);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    }
   };
 
   useEffect(() => {
@@ -160,15 +235,55 @@ export default function AdminAgentsScreen() {
         Alert.alert('Hors ligne', 'Mode lecture seule. Revenir en ligne pour modifier.');
         return;
       }
-      assertOnlineOrThrow();
+      
+      // Check if we're online without throwing
+      if (!supabase) {
+        Alert.alert('Erreur', 'Connexion à la base de données perdue');
+        return;
+      }
+
+      // Security check: Only the oldest admin can promote users to admin
+      const { data: oldestAdmin, error: oldestAdminError } = await supabase
+        .from('users')
+        .select('id, created_at')
+        .eq('role', 'admin')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (oldestAdminError || !oldestAdmin) {
+        Alert.alert('Erreur', 'Impossible de vérifier les permissions administrateur');
+        return;
+      }
+
+      if (userProfile?.id !== oldestAdmin.id) {
+        Alert.alert('Accès refusé', 'Seul l\'administrateur principal peut promouvoir des utilisateurs en administrateur');
+        return;
+      }
+
+      console.log('🔍 Promoting user to admin:', userId);
+      
       // update role only
       const { error } = await supabase.from('users').update({ role: 'admin' }).eq('id', userId);
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        Alert.alert('Erreur', `Erreur de base de données: ${error.message}`);
+        return;
+      }
+      
+      console.log('✅ User promoted to admin successfully');
       Alert.alert('Succès', "L'utilisateur est maintenant administrateur");
-      fetchAgents();
+      
+      // Refresh agents list
+      try {
+        await fetchAgents();
+      } catch (fetchError) {
+        console.error('Error refreshing agents after promotion:', fetchError);
+        // Don't show error to user, just log it
+      }
     } catch (error) {
       console.error('Error promoting to admin:', error);
-      Alert.alert('Erreur', "Promotion impossible");
+      Alert.alert('Erreur', `Promotion impossible: ${error.message || 'Erreur inconnue'}`);
     }
   };
 
@@ -178,14 +293,60 @@ export default function AdminAgentsScreen() {
         Alert.alert('Hors ligne', 'Mode lecture seule. Revenir en ligne pour modifier.');
         return;
       }
-      assertOnlineOrThrow();
+      
+      // Check if we're online without throwing
+      if (!supabase) {
+        Alert.alert('Erreur', 'Connexion à la base de données perdue');
+        return;
+      }
+
+      // Security check: Only the oldest admin can revoke admin rights
+      const { data: oldestAdmin, error: oldestAdminError } = await supabase
+        .from('users')
+        .select('id, created_at')
+        .eq('role', 'admin')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+
+      if (oldestAdminError || !oldestAdmin) {
+        Alert.alert('Erreur', 'Impossible de vérifier les permissions administrateur');
+        return;
+      }
+
+      if (userProfile?.id !== oldestAdmin.id) {
+        Alert.alert('Accès refusé', 'Seul l\'administrateur principal peut retirer les droits administrateur');
+        return;
+      }
+
+      // Prevent revoking the oldest admin's rights
+      if (userId === oldestAdmin.id) {
+        Alert.alert('Accès refusé', 'Impossible de retirer les droits de l\'administrateur principal');
+        return;
+      }
+
+      console.log('🔍 Revoking admin rights for user:', userId);
+      
       const { error } = await supabase.from('users').update({ role: 'agent' }).eq('id', userId);
-      if (error) throw error;
+      if (error) {
+        console.error('Database error:', error);
+        Alert.alert('Erreur', `Erreur de base de données: ${error.message}`);
+        return;
+      }
+      
+      console.log('✅ Admin rights revoked successfully');
       Alert.alert('Succès', "Droits administrateur retirés");
-      fetchAgents();
+      
+      // Refresh agents list
+      try {
+        await fetchAgents();
+      } catch (fetchError) {
+        console.error('Error refreshing agents after revoke:', fetchError);
+        // Don't show error to user, just log it
+      }
     } catch (error) {
       console.error('Error revoking admin:', error);
-      Alert.alert('Erreur', "Révocation impossible");
+      Alert.alert('Erreur', `Révocation impossible: ${error.message || 'Erreur inconnue'}`);
     }
   };
 
@@ -331,6 +492,11 @@ export default function AdminAgentsScreen() {
         <Text className="text-gray-500 mt-1">
           {agents.length} agent{agents.length > 1 ? 's' : ''} enregistré{agents.length > 1 ? 's' : ''}
         </Text>
+        <Text className="text-xs text-gray-400 mt-1">
+          En attente: {agents.filter(a => a.users?.statut === 'en_attente').length} | 
+          Actifs: {agents.filter(a => a.users?.statut === 'actif').length} | 
+          Inactifs: {agents.filter(a => a.users?.statut === 'inactif').length}
+        </Text>
       </View>
 
       {/* Filtres de statut */}
@@ -381,10 +547,25 @@ export default function AdminAgentsScreen() {
               {(agents.filter((a) =>
                 filter === 'all' ? true : (a.users?.statut === filter)
               )).map((agent) => (
-                <View key={agent.id} className="bg-white rounded-xl p-6 shadow-sm">
+                <View key={agent.user_id} className="bg-white rounded-xl p-6 shadow-sm">
                   <View className="flex-row items-start justify-between mb-4">
                     <View className="flex-1">
-                      <Text className="text-lg font-semibold text-gray-900">{agent.users?.nom}</Text>
+                      <View className="flex-row items-center">
+                        <Text className="text-lg font-semibold text-gray-900">{agent.users?.nom}</Text>
+                        {agent.users?.role === 'admin' && (
+                          <View className="ml-2 px-2 py-1 bg-purple-100 rounded-full">
+                            <Text className="text-xs font-medium text-purple-800">
+                              {(() => {
+                                // Check if this is the oldest admin
+                                const isOldestAdmin = agents
+                                  .filter(a => a.users?.role === 'admin')
+                                  .sort((a, b) => new Date(a.users?.created_at || 0).getTime() - new Date(b.users?.created_at || 0).getTime())[0]?.user_id === agent.user_id;
+                                return isOldestAdmin ? 'ADMIN PRINCIPAL' : 'ADMIN';
+                              })()}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
                       <Text className="text-gray-500 text-sm">{agent.users?.email}</Text>
                       <View className="flex-row items-center mt-2">
                         <Text className="text-gray-600 text-sm">Compte: </Text>
@@ -459,34 +640,40 @@ export default function AdminAgentsScreen() {
                     )}
                   </View>
 
-                  <View className="flex-row items-center justify-between pt-4 border-t border-gray-100">
-                    <View className="flex-row items-center">
-                      <Ionicons name="qr-code" size={16} color="#6b7280" />
-                      <Text className="text-gray-500 text-sm ml-2 font-mono">{agent.qr_code}</Text>
-                    </View>
-
-                    <View className="flex-row items-center space-x-2">
-                      {agent.users?.statut === 'en_attente' ? (
-                        <>
+                  {/* Action buttons for pending agents */}
+                  {(() => {
+                    console.log('🔍 Agent debug:', {
+                      agentId: agent.user_id,
+                      users: agent.users,
+                      statut: agent.users?.statut,
+                      isEnAttente: agent.users?.statut === 'en_attente'
+                    });
+                    return agent.users?.statut === 'en_attente';
+                  })() && (
+                    <View className="flex-row space-x-2 pt-4 border-t border-gray-100">
                           <TouchableOpacity
-                            className={`px-4 py-2 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-success-100'}`}
+                        className={`flex-1 px-4 py-3 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-success-100'}`}
                             disabled={offlineReadOnly}
                             onPress={() => approveAgent(agent.users?.id)}
                           >
-                            <Text className={`text-sm font-medium ${offlineReadOnly ? 'text-gray-500' : 'text-success-700'}`}>Approuver</Text>
+                        <Text className={`text-center font-medium ${offlineReadOnly ? 'text-gray-500' : 'text-success-700'}`}>Approuver</Text>
                           </TouchableOpacity>
                           <TouchableOpacity
-                            className={`px-4 py-2 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-danger-100'}`}
+                        className={`flex-1 px-4 py-3 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-danger-100'}`}
                             disabled={offlineReadOnly}
                             onPress={() => refuseAgent(agent.users?.id)}
                           >
-                            <Text className={`text-sm font-medium ${offlineReadOnly ? 'text-gray-500' : 'text-danger-700'}`}>Refuser</Text>
+                        <Text className={`text-center font-medium ${offlineReadOnly ? 'text-gray-500' : 'text-danger-700'}`}>Refuser</Text>
                           </TouchableOpacity>
-                        </>
-                      ) : (
-                        <>
+                    </View>
+                  )}
+
+                  {/* Action buttons for active/inactive agents */}
+                  {agent.users?.statut !== 'en_attente' && (
+                    <View className="pt-4 border-t border-gray-100">
+                      <View className="flex-row space-x-2 mb-2">
                           <TouchableOpacity
-                            className={`px-4 py-2 rounded-lg ${
+                          className={`flex-1 px-4 py-3 rounded-lg ${
                               offlineReadOnly
                                 ? 'bg-gray-200'
                                 : agent.users?.statut === 'actif' ? 'bg-danger-100' : 'bg-success-100'
@@ -495,7 +682,7 @@ export default function AdminAgentsScreen() {
                             onPress={() => toggleAgentStatus(agent.users?.id, agent.users?.statut)}
                           >
                             <Text
-                              className={`text-sm font-medium ${
+                            className={`text-center font-medium ${
                                 offlineReadOnly
                                   ? 'text-gray-500'
                                   : agent.users?.statut === 'actif' ? 'text-danger-700' : 'text-success-700'
@@ -507,31 +694,37 @@ export default function AdminAgentsScreen() {
 
                           {agent.users?.role === 'admin' ? (
                             <TouchableOpacity
-                              className={`px-4 py-2 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-danger-100'}`}
+                            className={`flex-1 px-4 py-3 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-danger-100'}`}
                               disabled={offlineReadOnly}
                               onPress={() => revokeAdmin(agent.users?.id)}
                             >
-                              <Text className="text-sm font-medium text-danger-700">Retirer admin</Text>
+                            <Text className="text-center font-medium text-danger-700">Retirer admin</Text>
                             </TouchableOpacity>
                           ) : (
                             <TouchableOpacity
-                              className={`px-4 py-2 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-primary-100'}`}
+                            className={`flex-1 px-4 py-3 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-primary-100'}`}
                               disabled={offlineReadOnly}
                               onPress={() => promoteToAdmin(agent.users?.id)}
                             >
-                              <Text className="text-sm font-medium text-primary-800">Promouvoir admin</Text>
+                            <Text className="text-center font-medium text-primary-800">Promouvoir admin</Text>
                             </TouchableOpacity>
                           )}
+                      </View>
 
                           <TouchableOpacity
-                            className={`px-4 py-2 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-warning-100'}`}
+                        className={`w-full px-4 py-3 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-warning-100'}`}
                             disabled={offlineReadOnly}
                             onPress={() => openAssignModal(agent.user_id)}
                           >
-                            <Text className="text-sm font-medium text-warning-800">Assigner client</Text>
+                        <Text className="text-center font-medium text-warning-800">Assigner client</Text>
                           </TouchableOpacity>
-                        </>
+                    </View>
                       )}
+
+                  <View className="flex-row items-center pt-4 border-t border-gray-100">
+                    <View className="flex-row items-center">
+                      <Ionicons name="qr-code" size={16} color="#6b7280" />
+                      <Text className="text-gray-500 text-sm ml-2 font-mono">{agent.qr_code}</Text>
                     </View>
                   </View>
                 </View>
@@ -546,10 +739,13 @@ export default function AdminAgentsScreen() {
           <View className="bg-white p-4 rounded-t-2xl" style={{ maxHeight: '70%' }}>
             <Text className="text-lg font-semibold mb-3">Sélectionner un client</Text>
             <ScrollView style={{ maxHeight: '60%' }}>
-              {clients.map((c) => (
+              {clients
+                .filter(c => c.users?.statut === 'actif') // Only show active clients
+                .map((c) => (
                 <TouchableOpacity key={c.user_id} className="p-3 border-b border-gray-100" onPress={() => assignAgentToClient(c.user_id)}>
-                  <Text className="font-medium text-gray-900">{c.users?.nom}</Text>
+                  <Text className="font-medium text-gray-900">{c.users?.nom || 'Nom non fourni'}</Text>
                   <Text className="text-gray-500 text-sm">{c.users?.email}</Text>
+                  <Text className="text-gray-400 text-xs">Statut: {c.users?.statut}</Text>
                   {c.last_latitude && c.last_longitude ? (
                     <Text className="text-gray-600 text-xs mt-1">Pos: {Number(c.last_latitude).toFixed(6)}, {Number(c.last_longitude).toFixed(6)}</Text>
                   ) : (

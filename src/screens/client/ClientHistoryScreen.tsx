@@ -5,15 +5,18 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabase } from '../../contexts/SupabaseContext';
+import { useNavigation } from '@react-navigation/native';
 
 export default function ClientHistoryScreen() {
   const { userProfile } = useAuth();
   const supabase = useSupabase();
+  const navigation: any = useNavigation();
   const [scans, setScans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -26,14 +29,15 @@ export default function ClientHistoryScreen() {
         .from('clients')
         .select('historique_scans')
         .eq('user_id', userProfile.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching scan history:', error);
+        Alert.alert('Erreur', 'Impossible de charger l\'historique des scans');
         return;
       }
 
-      const scanHistory = data.historique_scans || [];
+      const scanHistory = data?.historique_scans || [];
       setScans(scanHistory.reverse()); // Most recent first
     } catch (error) {
       console.error('Error fetching scan history:', error);
@@ -51,6 +55,7 @@ export default function ClientHistoryScreen() {
     setRefreshing(true);
     fetchScanHistory();
   };
+
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -155,7 +160,10 @@ export default function ClientHistoryScreen() {
               <Text className="text-gray-400 text-center mt-2">
                 Utilisez le scanner pour vérifier le statut des agents de sécurité
               </Text>
-              <TouchableOpacity className="bg-primary-900 px-6 py-3 rounded-lg mt-6">
+              <TouchableOpacity 
+                className="bg-primary-900 px-6 py-3 rounded-lg mt-6"
+                onPress={() => navigation.navigate('Scanner')}
+              >
                 <Text className="text-white font-semibold">Commencer à scanner</Text>
               </TouchableOpacity>
             </View>

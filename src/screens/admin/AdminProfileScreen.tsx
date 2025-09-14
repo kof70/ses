@@ -245,8 +245,8 @@ export default function AdminProfileScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Admin Actions */}
-          <View className="bg-white rounded-xl p-6 shadow-sm">
+          {/* Admin Actions - Commenté */}
+          {/* <View className="bg-white rounded-xl p-6 shadow-sm">
             <Text className="text-lg font-semibold text-gray-900 mb-4">
               Actions administrateur
             </Text>
@@ -280,7 +280,7 @@ export default function AdminProfileScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </View> */}
 
           {/* General Actions */}
           <View className="bg-white rounded-xl p-6 shadow-sm">
@@ -289,7 +289,7 @@ export default function AdminProfileScreen() {
             </Text>
             
             <View className="space-y-3">
-              <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg">
+              {/* <TouchableOpacity className="flex-row items-center p-3 bg-gray-50 rounded-lg">
                 <Ionicons name="notifications" size={24} color="#6b7280" />
                 <Text className="text-gray-700 ml-3 font-medium">
                   Paramètres de notification
@@ -301,7 +301,7 @@ export default function AdminProfileScreen() {
                 <Text className="text-gray-700 ml-3 font-medium">
                   Aide et support
                 </Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
               
               <TouchableOpacity 
                 className="flex-row items-center p-3 bg-red-50 rounded-lg"
@@ -323,10 +323,12 @@ export default function AdminProfileScreen() {
               </View>
               <View className="flex-1">
                 <Text className="text-blue-900 font-semibold mb-2">
-                  SecureGuard Pro - Administration
+                  SES - Administration
                 </Text>
                 <Text className="text-blue-800 text-sm leading-5">
                   Version 1.0.0{'\n'}
+                  Développé par Rekap{'\n'}
+                  Contact: djakpakoffi7029@gmail.com{'\n'}
                   Interface d'administration pour la gestion complète du système de sécurité mobile.
                 </Text>
               </View>
