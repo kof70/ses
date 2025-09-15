@@ -138,7 +138,7 @@ export default function AdminAgentsScreen() {
 
       // Then get client-specific data (optional)
       const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
+      .from('clients')
         .select(`
           user_id,
           last_latitude,
@@ -551,7 +551,7 @@ export default function AdminAgentsScreen() {
                   <View className="flex-row items-start justify-between mb-4">
                     <View className="flex-1">
                       <View className="flex-row items-center">
-                        <Text className="text-lg font-semibold text-gray-900">{agent.users?.nom}</Text>
+                      <Text className="text-lg font-semibold text-gray-900">{agent.users?.nom}</Text>
                         {agent.users?.role === 'admin' && (
                           <View className="ml-2 px-2 py-1 bg-purple-100 rounded-full">
                             <Text className="text-xs font-medium text-purple-800">

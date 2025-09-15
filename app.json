@@ -17,7 +17,6 @@
     },
     "android": {
       "package": "com.secureguard.pro",
-      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1e3a8a"
@@ -28,7 +27,8 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "VIBRATE"
-      ]
+      ],
+      "edgeToEdgeEnabled": true
     },
     "plugins": [
       [
@@ -38,7 +38,8 @@
         }
       ],
       "expo-web-browser",
-      "expo-asset"
+      "expo-asset",
+      "expo-font"
     ],
     "scheme": "secureguard",
     "extra": {
