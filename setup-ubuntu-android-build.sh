@@ -2,29 +2,31 @@
 
 # Script d'installation pour construire l'APK Android sur Ubuntu
 # Usage: chmod +x setup-ubuntu-android-build.sh && ./setup-ubuntu-android-build.sh
+# Peut s'exécuter en tant que root ou utilisateur normal
 
 set -e
 
 echo "🚀 Installation des outils pour construire l'APK Android sur Ubuntu"
 echo "=================================================================="
 
-# Le script peut s'exécuter en tant que root ou utilisateur normal
+# Déterminer si on est root ou utilisateur normal
+if [[ $EUID -eq 0 ]]; then
+    echo "🔑 Exécution en tant que root"
+    SUDO_CMD=""
+    HOME_DIR="/root"
+else
+    echo "👤 Exécution en tant qu'utilisateur normal"
+    SUDO_CMD="sudo"
+    HOME_DIR="$HOME"
+fi
 
 # Mettre à jour le système
 echo "📦 Mise à jour du système Ubuntu..."
-if [[ $EUID -eq 0 ]]; then
-    apt update && apt upgrade -y
-else
-    sudo apt update && sudo apt upgrade -y
-fi
+$SUDO_CMD apt update && $SUDO_CMD apt upgrade -y
 
 # Installer les dépendances de base
 echo "📦 Installation des dépendances de base..."
-if [[ $EUID -eq 0 ]]; then
-    apt install -y \
-else
-    sudo apt install -y \
-fi
+$SUDO_CMD apt install -y \
     curl \
     wget \
     git \
@@ -59,27 +61,27 @@ fi
 
 # Installer Node.js 18
 echo "📦 Installation de Node.js 18..."
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
+curl -fsSL https://deb.nodesource.com/setup_18.x | $SUDO_CMD -E bash -
+$SUDO_CMD apt-get install -y nodejs
 
 # Vérifier l'installation de Node.js
 NODE_VERSION=$(node --version)
 echo "✅ Node.js installé: $NODE_VERSION"
 
 # Installer npm globalement
-sudo npm install -g npm@latest
+$SUDO_CMD npm install -g npm@latest
 
 # Installer Yarn
 echo "📦 Installation de Yarn..."
-sudo npm install -g yarn
+$SUDO_CMD npm install -g yarn
 
 # Installer Java 17
 echo "📦 Installation de Java 17..."
-sudo apt install -y openjdk-17-jdk
+$SUDO_CMD apt install -y openjdk-17-jdk
 
 # Configurer JAVA_HOME
-echo 'export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64' >> ~/.bashrc
-echo 'export PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
+echo 'export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64' >> $HOME_DIR/.bashrc
+echo 'export PATH=$JAVA_HOME/bin:$PATH' >> $HOME_DIR/.bashrc
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH=$JAVA_HOME/bin:$PATH
 
@@ -89,7 +91,7 @@ echo "✅ Java installé: $JAVA_VERSION"
 
 # Installer Android SDK
 echo "📦 Installation d'Android SDK..."
-cd ~
+cd $HOME_DIR
 mkdir -p android-sdk
 cd android-sdk
 
@@ -104,10 +106,10 @@ mkdir -p cmdline-tools/latest
 mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
 
 # Configurer ANDROID_HOME
-ANDROID_HOME="$HOME/android-sdk"
-echo "export ANDROID_HOME=$ANDROID_HOME" >> ~/.bashrc
-echo "export ANDROID_SDK_ROOT=$ANDROID_HOME" >> ~/.bashrc
-echo "export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH" >> ~/.bashrc
+ANDROID_HOME="$HOME_DIR/android-sdk"
+echo "export ANDROID_HOME=$ANDROID_HOME" >> $HOME_DIR/.bashrc
+echo "export ANDROID_SDK_ROOT=$ANDROID_HOME" >> $HOME_DIR/.bashrc
+echo "export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH" >> $HOME_DIR/.bashrc
 export ANDROID_HOME=$ANDROID_HOME
 export ANDROID_SDK_ROOT=$ANDROID_HOME
 export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
@@ -131,74 +133,74 @@ $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
 
 # Installer Expo CLI
 echo "📦 Installation d'Expo CLI..."
-sudo npm install -g @expo/cli
+$SUDO_CMD npm install -g @expo/cli
 
 # Installer EAS CLI
 echo "📦 Installation d'EAS CLI..."
-sudo npm install -g eas-cli
+$SUDO_CMD npm install -g eas-cli
 
 # Installer Watchman
 echo "📦 Installation de Watchman..."
-sudo apt install -y watchman
+$SUDO_CMD apt install -y watchman
 
 # Installer Gradle
 echo "📦 Installation de Gradle..."
 wget -q https://services.gradle.org/distributions/gradle-8.13-bin.zip
-sudo unzip -q gradle-8.13-bin.zip -d /opt/
-sudo ln -sf /opt/gradle-8.13/bin/gradle /usr/local/bin/gradle
+$SUDO_CMD unzip -q gradle-8.13-bin.zip -d /opt/
+$SUDO_CMD ln -sf /opt/gradle-8.13/bin/gradle /usr/local/bin/gradle
 rm gradle-8.13-bin.zip
 
 # Configurer les variables d'environnement pour Gradle
-echo "export GRADLE_HOME=/opt/gradle-8.13" >> ~/.bashrc
-echo "export PATH=$GRADLE_HOME/bin:$PATH" >> ~/.bashrc
+echo "export GRADLE_HOME=/opt/gradle-8.13" >> $HOME_DIR/.bashrc
+echo "export PATH=$GRADLE_HOME/bin:$PATH" >> $HOME_DIR/.bashrc
 
 # Créer un script de configuration d'environnement
 echo "📝 Création du script de configuration d'environnement..."
-cat > ~/setup-android-env.sh << 'EOF'
+cat > $HOME_DIR/setup-android-env.sh << EOF
 #!/bin/bash
 # Script de configuration de l'environnement Android
 
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-export ANDROID_HOME=$HOME/android-sdk
+export ANDROID_HOME=$ANDROID_HOME
 export ANDROID_SDK_ROOT=$ANDROID_HOME
 export GRADLE_HOME=/opt/gradle-8.13
 
-export PATH=$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$GRADLE_HOME/bin:$PATH
+export PATH=\$JAVA_HOME/bin:\$ANDROID_HOME/cmdline-tools/latest/bin:\$ANDROID_HOME/platform-tools:\$GRADLE_HOME/bin:\$PATH
 
 echo "Environnement Android configuré :"
-echo "JAVA_HOME: $JAVA_HOME"
-echo "ANDROID_HOME: $ANDROID_HOME"
-echo "GRADLE_HOME: $GRADLE_HOME"
-echo "Node version: $(node --version)"
-echo "Java version: $(java -version 2>&1 | head -n 1)"
-echo "Android SDK version: $($ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --version 2>/dev/null || echo 'Non disponible')"
+echo "JAVA_HOME: \$JAVA_HOME"
+echo "ANDROID_HOME: \$ANDROID_HOME"
+echo "GRADLE_HOME: \$GRADLE_HOME"
+echo "Node version: \$(node --version)"
+echo "Java version: \$(java -version 2>&1 | head -n 1)"
+echo "Android SDK version: \$(\$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --version 2>/dev/null || echo 'Non disponible')"
 EOF
 
-chmod +x ~/setup-android-env.sh
+chmod +x $HOME_DIR/setup-android-env.sh
 
 # Créer un script de build pour le projet
 echo "📝 Création du script de build..."
-cat > ~/build-android-apk.sh << 'EOF'
+cat > $HOME_DIR/build-android-apk.sh << EOF
 #!/bin/bash
 # Script de build pour l'APK Android
 
 set -e
 
 # Charger l'environnement Android
-source ~/setup-android-env.sh
+source $HOME_DIR/setup-android-env.sh
 
 # Aller dans le répertoire du projet
-PROJECT_DIR="$1"
-if [ -z "$PROJECT_DIR" ]; then
-    echo "Usage: $0 <chemin_vers_le_projet>"
-    echo "Exemple: $0 /path/to/secureguard-mobile"
+PROJECT_DIR="\$1"
+if [ -z "\$PROJECT_DIR" ]; then
+    echo "Usage: \$0 <chemin_vers_le_projet>"
+    echo "Exemple: \$0 /path/to/secureguard-mobile"
     exit 1
 fi
 
-cd "$PROJECT_DIR"
+cd "\$PROJECT_DIR"
 
 echo "🚀 Construction de l'APK Android..."
-echo "Répertoire du projet: $(pwd)"
+echo "Répertoire du projet: \$(pwd)"
 
 # Nettoyer le cache
 echo "🧹 Nettoyage du cache..."
@@ -219,7 +221,7 @@ npx eas build --platform android --local
 echo "✅ Build terminé ! L'APK se trouve dans le dossier android/app/build/outputs/apk/"
 EOF
 
-chmod +x ~/build-android-apk.sh
+chmod +x $HOME_DIR/build-android-apk.sh
 
 # Afficher les informations finales
 echo ""
@@ -236,8 +238,8 @@ echo "✅ Gradle installé"
 echo ""
 echo "📝 Scripts créés :"
 echo "=================="
-echo "• ~/setup-android-env.sh - Configuration de l'environnement"
-echo "• ~/build-android-apk.sh - Construction de l'APK"
+echo "• $HOME_DIR/setup-android-env.sh - Configuration de l'environnement"
+echo "• $HOME_DIR/build-android-apk.sh - Construction de l'APK"
 echo ""
 echo "🚀 Pour construire votre APK :"
 echo "=============================="
@@ -246,6 +248,6 @@ echo "   git clone <votre-repo> secureguard-mobile"
 echo "   cd secureguard-mobile"
 echo ""
 echo "2. Construisez l'APK :"
-echo "   ~/build-android-apk.sh ."
+echo "   $HOME_DIR/build-android-apk.sh ."
 echo ""
-echo "💡 Note: Redémarrez votre terminal ou exécutez 'source ~/.bashrc' pour charger les variables d'environnement."
+echo "💡 Note: Redémarrez votre terminal ou exécutez 'source $HOME_DIR/.bashrc' pour charger les variables d'environnement."
