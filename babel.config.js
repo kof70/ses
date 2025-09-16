@@ -3,8 +3,6 @@ module.exports = function(api) {
   return {
     presets: [
       'babel-preset-expo',
-      // Correct: NativeWind provides a Babel preset
-      'nativewind/babel',
     ],
     plugins: [
       // Reanimated plugin must be listed last
