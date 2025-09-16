@@ -3,47 +3,23 @@
 # Script d'installation pour construire l'APK Android sur Ubuntu
 # Usage: chmod +x setup-ubuntu-android-build.sh && ./setup-ubuntu-android-build.sh
 
-set -e  # Arrêter le script en cas d'erreur
+set -e
 
 echo "🚀 Installation des outils pour construire l'APK Android sur Ubuntu"
 echo "=================================================================="
 
-# Couleurs pour les messages
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Fonction pour afficher les messages colorés
-print_status() {
-    echo -e "${BLUE}[INFO]${NC} $1"
-}
-
-print_success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
 # Vérifier si le script est exécuté en tant que root
 if [[ $EUID -eq 0 ]]; then
-   print_error "Ce script ne doit pas être exécuté en tant que root"
+   echo "❌ Ce script ne doit pas être exécuté en tant que root"
    exit 1
 fi
 
 # Mettre à jour le système
-print_status "Mise à jour du système Ubuntu..."
+echo "📦 Mise à jour du système Ubuntu..."
 sudo apt update && sudo apt upgrade -y
 
 # Installer les dépendances de base
-print_status "Installation des dépendances de base..."
+echo "📦 Installation des dépendances de base..."
 sudo apt install -y \
     curl \
     wget \
@@ -77,24 +53,24 @@ sudo apt install -y \
     libffi-dev \
     liblzma-dev
 
-# Installer Node.js 18 (version recommandée pour React Native)
-print_status "Installation de Node.js 18..."
+# Installer Node.js 18
+echo "📦 Installation de Node.js 18..."
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 # Vérifier l'installation de Node.js
 NODE_VERSION=$(node --version)
-print_success "Node.js installé: $NODE_VERSION"
+echo "✅ Node.js installé: $NODE_VERSION"
 
 # Installer npm globalement
 sudo npm install -g npm@latest
 
-# Installer Yarn (optionnel mais recommandé)
-print_status "Installation de Yarn..."
+# Installer Yarn
+echo "📦 Installation de Yarn..."
 sudo npm install -g yarn
 
-# Installer Java 17 (requis pour Android)
-print_status "Installation de Java 17..."
+# Installer Java 17
+echo "📦 Installation de Java 17..."
 sudo apt install -y openjdk-17-jdk
 
 # Configurer JAVA_HOME
@@ -105,10 +81,10 @@ export PATH=$JAVA_HOME/bin:$PATH
 
 # Vérifier l'installation de Java
 JAVA_VERSION=$(java -version 2>&1 | head -n 1)
-print_success "Java installé: $JAVA_VERSION"
+echo "✅ Java installé: $JAVA_VERSION"
 
 # Installer Android SDK
-print_status "Installation d'Android SDK..."
+echo "📦 Installation d'Android SDK..."
 cd ~
 mkdir -p android-sdk
 cd android-sdk
@@ -133,11 +109,11 @@ export ANDROID_SDK_ROOT=$ANDROID_HOME
 export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
 
 # Accepter les licences Android
-print_status "Acceptation des licences Android..."
+echo "📋 Acceptation des licences Android..."
 yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses
 
 # Installer les composants Android SDK requis
-print_status "Installation des composants Android SDK..."
+echo "📦 Installation des composants Android SDK..."
 $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
     "platform-tools" \
     "platforms;android-34" \
@@ -150,19 +126,19 @@ $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager \
     "cmake;3.22.1"
 
 # Installer Expo CLI
-print_status "Installation d'Expo CLI..."
+echo "📦 Installation d'Expo CLI..."
 sudo npm install -g @expo/cli
 
 # Installer EAS CLI
-print_status "Installation d'EAS CLI..."
+echo "📦 Installation d'EAS CLI..."
 sudo npm install -g eas-cli
 
-# Installer Watchman (recommandé pour React Native)
-print_status "Installation de Watchman..."
+# Installer Watchman
+echo "📦 Installation de Watchman..."
 sudo apt install -y watchman
 
-# Installer Gradle (si nécessaire)
-print_status "Installation de Gradle..."
+# Installer Gradle
+echo "📦 Installation de Gradle..."
 wget -q https://services.gradle.org/distributions/gradle-8.13-bin.zip
 sudo unzip -q gradle-8.13-bin.zip -d /opt/
 sudo ln -sf /opt/gradle-8.13/bin/gradle /usr/local/bin/gradle
@@ -173,7 +149,7 @@ echo "export GRADLE_HOME=/opt/gradle-8.13" >> ~/.bashrc
 echo "export PATH=$GRADLE_HOME/bin:$PATH" >> ~/.bashrc
 
 # Créer un script de configuration d'environnement
-print_status "Création du script de configuration d'environnement..."
+echo "📝 Création du script de configuration d'environnement..."
 cat > ~/setup-android-env.sh << 'EOF'
 #!/bin/bash
 # Script de configuration de l'environnement Android
@@ -197,7 +173,7 @@ EOF
 chmod +x ~/setup-android-env.sh
 
 # Créer un script de build pour le projet
-print_status "Création du script de build..."
+echo "📝 Création du script de build..."
 cat > ~/build-android-apk.sh << 'EOF'
 #!/bin/bash
 # Script de build pour l'APK Android
@@ -241,39 +217,9 @@ EOF
 
 chmod +x ~/build-android-apk.sh
 
-# Créer un script pour corriger le conflit worklets/reanimated
-print_status "Création du script de correction des conflits..."
-cat > ~/fix-worklets-conflict.sh << 'EOF'
-#!/bin/bash
-# Script pour corriger le conflit entre react-native-worklets et react-native-reanimated
-
-set -e
-
-PROJECT_DIR="$1"
-if [ -z "$PROJECT_DIR" ]; then
-    echo "Usage: $0 <chemin_vers_le_projet>"
-    exit 1
-fi
-
-cd "$PROJECT_DIR"
-
-echo "🔧 Correction du conflit worklets/reanimated..."
-
-# Supprimer react-native-worklets qui cause le conflit
-echo "Suppression de react-native-worklets..."
-npm uninstall react-native-worklets
-
-# Nettoyer et réinstaller
-rm -rf node_modules package-lock.json
-npm install --no-fund --no-audit
-
-echo "✅ Conflit corrigé !"
-EOF
-
-chmod +x ~/fix-worklets-conflict.sh
-
 # Afficher les informations finales
-print_success "Installation terminée !"
+echo ""
+echo "✅ Installation terminée !"
 echo ""
 echo "📋 Résumé de l'installation :"
 echo "=============================="
@@ -288,7 +234,6 @@ echo "📝 Scripts créés :"
 echo "=================="
 echo "• ~/setup-android-env.sh - Configuration de l'environnement"
 echo "• ~/build-android-apk.sh - Construction de l'APK"
-echo "• ~/fix-worklets-conflict.sh - Correction du conflit worklets"
 echo ""
 echo "🚀 Pour construire votre APK :"
 echo "=============================="
@@ -296,10 +241,7 @@ echo "1. Clonez votre projet :"
 echo "   git clone <votre-repo> secureguard-mobile"
 echo "   cd secureguard-mobile"
 echo ""
-echo "2. Corrigez le conflit worklets :"
-echo "   ~/fix-worklets-conflict.sh ."
-echo ""
-echo "3. Construisez l'APK :"
+echo "2. Construisez l'APK :"
 echo "   ~/build-android-apk.sh ."
 echo ""
 echo "💡 Note: Redémarrez votre terminal ou exécutez 'source ~/.bashrc' pour charger les variables d'environnement."
