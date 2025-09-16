@@ -8,19 +8,23 @@ set -e
 echo "🚀 Installation des outils pour construire l'APK Android sur Ubuntu"
 echo "=================================================================="
 
-# Vérifier si le script est exécuté en tant que root
-if [[ $EUID -eq 0 ]]; then
-   echo "❌ Ce script ne doit pas être exécuté en tant que root"
-   exit 1
-fi
+# Le script peut s'exécuter en tant que root ou utilisateur normal
 
 # Mettre à jour le système
 echo "📦 Mise à jour du système Ubuntu..."
-sudo apt update && sudo apt upgrade -y
+if [[ $EUID -eq 0 ]]; then
+    apt update && apt upgrade -y
+else
+    sudo apt update && sudo apt upgrade -y
+fi
 
 # Installer les dépendances de base
 echo "📦 Installation des dépendances de base..."
-sudo apt install -y \
+if [[ $EUID -eq 0 ]]; then
+    apt install -y \
+else
+    sudo apt install -y \
+fi
     curl \
     wget \
     git \
