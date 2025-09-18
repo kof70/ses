@@ -7,6 +7,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
 dist
 dist-ssr
@@ -22,4 +23,36 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Expo
 .expo/
+
+# Android
+android/
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# iOS
+ios/
+*.ipa
+
+# Build outputs
+build/
+*.apk
+*.aab
+*.ipa
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temporary files
+*.tmp
+*.temp
+*.tar.gz
+*.zip
