@@ -224,17 +224,21 @@ export default function ClientProfileScreen() {
               
               <View className="bg-gray-50 rounded-lg p-3">
                 <Text className="text-gray-600 text-sm mb-1 font-medium">Email</Text>
-                <Text className="text-gray-900 font-medium">{userProfile?.email}</Text>
-              </View>
-              
-              <View className="bg-gray-50 rounded-lg p-3">
-                <Text className="text-gray-600 text-sm mb-1 font-medium">Rôle</Text>
-                <Text className="text-gray-900 font-medium capitalize">{userProfile?.role}</Text>
-              </View>
-              
-              <View className="bg-gray-50 rounded-lg p-3">
-                <Text className="text-gray-600 text-sm mb-1 font-medium">Statut du compte</Text>
-                <Text className="text-gray-900 font-medium capitalize">{userProfile?.statut}</Text>
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-gray-900 font-medium flex-1">{userProfile?.email}</Text>
+                  <View className="bg-green-100 px-2 py-1 rounded-full ml-2">
+                    <Text className="text-green-800 font-medium text-xs capitalize">
+                      {userProfile?.role}
+                    </Text>
+                  </View>
+                </View>
+                <View className="mt-2">
+                  <View className="bg-success-100 px-2 py-1 rounded-full self-start">
+                    <Text className="text-success-800 font-medium text-xs capitalize">
+                      {userProfile?.statut}
+                    </Text>
+                  </View>
+                </View>
               </View>
             </View>
           </View>

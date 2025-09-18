@@ -163,10 +163,26 @@ export default function AgentDashboardScreen() {
       >
         {/* Header - style clair */}
         <View className="bg-white px-6 py-6 border-b border-gray-100">
-          <Text className="text-2xl font-bold text-gray-900">
-            Bonjour, {userProfile?.nom}
-          </Text>
-          <Text className="text-gray-500 mt-1">Agent de sécurité</Text>
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1">
+              <Text className="text-2xl font-bold text-gray-900">
+                Bonjour, {userProfile?.nom}
+              </Text>
+              <Text className="text-gray-500 mt-1">Agent de sécurité</Text>
+            </View>
+            <View className="flex-row space-x-2">
+              <View className="bg-blue-100 px-2 py-1 rounded-full">
+                <Text className="text-blue-800 font-medium text-xs capitalize">
+                  {userProfile?.role}
+                </Text>
+              </View>
+              <View className="bg-success-100 px-2 py-1 rounded-full">
+                <Text className="text-success-800 font-medium text-xs capitalize">
+                  {userProfile?.statut}
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
 
         <View className="px-6 py-6 space-y-6">

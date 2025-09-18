@@ -33,15 +33,17 @@ export default function AdminProfileScreen() {
         .from('users')
         .select('*', { count: 'exact', head: true });
 
-      // Fetch agents count
+      // Fetch agents count - count users with role 'agent' instead of agents table
       const { count: agentsCount } = await supabase
-        .from('agents')
-        .select('*', { count: 'exact', head: true });
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'agent');
 
-      // Fetch clients count
+      // Fetch clients count - count users with role 'client' instead of clients table
       const { count: clientsCount } = await supabase
-        .from('clients')
-        .select('*', { count: 'exact', head: true });
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'client');
 
       // Fetch announcements count
       const { count: announcementsCount } = await supabase
@@ -155,75 +157,71 @@ export default function AdminProfileScreen() {
               
               <View className="bg-gray-50 rounded-lg p-3">
                 <Text className="text-gray-600 text-sm mb-1 font-medium">Email</Text>
-                <Text className="text-gray-900 font-medium">{userProfile?.email}</Text>
-              </View>
-              
-              <View className="bg-gray-50 rounded-lg p-3">
-                <Text className="text-gray-600 text-sm mb-1 font-medium">Rôle</Text>
-                <View className="bg-primary-100 px-3 py-1 rounded-full self-start mt-1">
-                  <Text className="text-primary-800 font-medium capitalize">
-                    {userProfile?.role}
-                  </Text>
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-gray-900 font-medium flex-1">{userProfile?.email}</Text>
+                  <View className="bg-primary-100 px-2 py-1 rounded-full ml-2">
+                    <Text className="text-primary-800 font-medium text-xs capitalize">
+                      {userProfile?.role}
+                    </Text>
+                  </View>
                 </View>
-              </View>
-              
-              <View className="bg-gray-50 rounded-lg p-3">
-                <Text className="text-gray-600 text-sm mb-1 font-medium">Statut du compte</Text>
-                <View className="bg-success-100 px-3 py-1 rounded-full self-start mt-1">
-                  <Text className="text-success-800 font-medium capitalize">
-                    {userProfile?.statut}
-                  </Text>
+                <View className="mt-2">
+                  <View className="bg-success-100 px-2 py-1 rounded-full self-start">
+                    <Text className="text-success-800 font-medium text-xs capitalize">
+                      {userProfile?.statut}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
           </View>
 
           {/* System Statistics - Optimisé */}
-          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <Text className="text-lg font-semibold text-gray-900 mb-4">
-              Statistiques du système
+          <View className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <Text className="text-base font-semibold text-gray-900 mb-3">
+              État du système
             </Text>
             
-            <View className="space-y-4">
+            <View className="space-y-3">
               {/* Première ligne */}
-              <View className="flex-row space-x-4">
-                <View className="flex-1 bg-primary-50 p-4 rounded-lg border border-primary-100">
-                  <Text className="text-2xl font-bold text-primary-900">
+              <View className="flex-row space-x-2">
+                <View className="flex-1 bg-primary-50 p-3 rounded-lg border border-primary-100">
+                  <Text className="text-xl font-bold text-primary-900">
                     {stats.totalUsers}
                   </Text>
-                  <Text className="text-primary-700 text-sm font-medium">Utilisateurs total</Text>
+                  <Text className="text-primary-700 text-xs font-medium">Utilisateurs</Text>
                 </View>
                 
-                <View className="flex-1 bg-success-50 p-4 rounded-lg border border-success-100">
-                  <Text className="text-2xl font-bold text-success-900">
+                <View className="flex-1 bg-success-50 p-3 rounded-lg border border-success-100">
+                  <Text className="text-xl font-bold text-success-900">
                     {stats.totalAgents}
                   </Text>
-                  <Text className="text-success-700 text-sm font-medium">Agents</Text>
+                  <Text className="text-success-700 text-xs font-medium">Agents</Text>
                 </View>
               </View>
               
               {/* Deuxième ligne */}
-              <View className="flex-row space-x-4">
-                <View className="flex-1 bg-warning-50 p-4 rounded-lg border border-warning-100">
-                  <Text className="text-2xl font-bold text-warning-900">
+              <View className="flex-row space-x-2">
+                <View className="flex-1 bg-warning-50 p-3 rounded-lg border border-warning-100">
+                  <Text className="text-xl font-bold text-warning-900">
                     {stats.totalClients}
                   </Text>
-                  <Text className="text-warning-700 text-sm font-medium">Clients</Text>
+                  <Text className="text-warning-700 text-xs font-medium">Clients</Text>
                 </View>
                 
-                <View className="flex-1 bg-danger-50 p-4 rounded-lg border border-danger-100">
-                  <Text className="text-2xl font-bold text-danger-900">
+                <View className="flex-1 bg-danger-50 p-3 rounded-lg border border-danger-100">
+                  <Text className="text-xl font-bold text-danger-900">
                     {stats.totalAlerts}
                   </Text>
-                  <Text className="text-danger-700 text-sm font-medium">Alertes SOS</Text>
+                  <Text className="text-danger-700 text-xs font-medium">Alertes</Text>
                 </View>
               </View>
             </View>
             
-            <View className="mt-4 pt-4 border-t border-gray-100">
+            <View className="mt-3 pt-3 border-t border-gray-100">
               <View className="flex-row items-center justify-between">
-                <Text className="text-gray-600">Annonces publiées</Text>
-                <Text className="text-gray-900 font-bold text-lg">
+                <Text className="text-gray-600 text-sm">Annonces</Text>
+                <Text className="text-gray-900 font-bold text-base">
                   {stats.totalAnnouncements}
                 </Text>
               </View>

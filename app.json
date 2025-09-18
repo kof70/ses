@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "SecureGuard Pro",
-    "slug": "secureguard-pro",
+    "name": "SES",
+    "slug": "ses",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
@@ -14,10 +14,10 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.secureguard.pro"
+      "bundleIdentifier": "com.ses.app"
     },
     "android": {
-      "package": "com.secureguard.pro",
+      "package": "com.ses.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#1e3a8a"
@@ -40,9 +40,9 @@
       ],
       "expo-web-browser",
       "expo-asset",
-      "expo-font",
+      "expo-font"
     ],
-    "scheme": "secureguard",
+    "scheme": "ses",
     "extra": {
       "eas": {
         "projectId": "00290657-f980-4860-8962-15bffba296ae"

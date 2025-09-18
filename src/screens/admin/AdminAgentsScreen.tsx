@@ -301,27 +301,49 @@ export default function AdminAgentsScreen() {
       }
 
       // Security check: Only the oldest admin can revoke admin rights
-      const { data: oldestAdmin, error: oldestAdminError } = await supabase
+      const { data: allAdmins, error: adminsError } = await supabase
         .from('users')
-        .select('id, created_at')
+        .select('id, created_at, email')
         .eq('role', 'admin')
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .single();
+        .order('created_at', { ascending: true });
 
-      if (oldestAdminError || !oldestAdmin) {
+      if (adminsError || !allAdmins || allAdmins.length === 0) {
         Alert.alert('Erreur', 'Impossible de vérifier les permissions administrateur');
         return;
       }
 
-      if (userProfile?.id !== oldestAdmin.id) {
-        Alert.alert('Accès refusé', 'Seul l\'administrateur principal peut retirer les droits administrateur');
+      // Get the oldest admin (first in the sorted list)
+      const oldestAdmin = allAdmins[0];
+      
+      // If there are multiple admins with the same creation date, use ID as tiebreaker
+      const oldestAdmins = allAdmins.filter(admin => 
+        new Date(admin.created_at).getTime() === new Date(oldestAdmin.created_at).getTime()
+      );
+      
+      const finalOldestAdmin = oldestAdmins.length > 1 
+        ? oldestAdmins.sort((a, b) => a.id.localeCompare(b.id))[0]  // Sort by ID as tiebreaker
+        : oldestAdmin;
+
+      console.log('🔍 Admin check:', {
+        currentUserId: userProfile?.id,
+        currentUserEmail: userProfile?.email,
+        oldestAdminId: finalOldestAdmin.id,
+        oldestAdminEmail: finalOldestAdmin.email,
+        areEqual: userProfile?.id === finalOldestAdmin.id,
+        currentUserRole: userProfile?.role,
+        targetUserId: userId,
+        allAdmins: allAdmins.map(a => ({ id: a.id, email: a.email, created_at: a.created_at }))
+      });
+
+      // Only the oldest admin can revoke admin rights
+      if (userProfile?.id !== finalOldestAdmin.id) {
+        Alert.alert('Accès refusé', `Seul l'administrateur principal (${finalOldestAdmin.email}) peut retirer les droits administrateur`);
         return;
       }
 
-      // Prevent revoking the oldest admin's rights
-      if (userId === oldestAdmin.id) {
-        Alert.alert('Accès refusé', 'Impossible de retirer les droits de l\'administrateur principal');
+      // Prevent self-revocation (oldest admin cannot revoke their own rights)
+      if (userProfile?.id === userId) {
+        Alert.alert('Accès refusé', 'Impossible de retirer vos propres droits administrateur');
         return;
       }
 
@@ -487,9 +509,9 @@ export default function AdminAgentsScreen() {
   return (
     <SafeAreaView className="flex-1 bg-gray-50">
       {/* Header - style clair */}
-      <View className="bg-white px-6 py-6 border-b border-gray-100">
-        <Text className="text-2xl font-bold text-gray-900">Gestion des agents</Text>
-        <Text className="text-gray-500 mt-1">
+      <View className="bg-white px-6 py-4 border-b border-gray-100">
+        <Text className="text-xl font-bold text-gray-900">Gestion des agents</Text>
+        <Text className="text-gray-500 text-sm mt-1">
           {agents.length} agent{agents.length > 1 ? 's' : ''} enregistré{agents.length > 1 ? 's' : ''}
         </Text>
         <Text className="text-xs text-gray-400 mt-1">
@@ -500,31 +522,31 @@ export default function AdminAgentsScreen() {
       </View>
 
       {/* Filtres de statut */}
-      <View className="bg-white px-6 py-4 border-b border-gray-200">
-        <View className="flex-row space-x-3">
+      <View className="bg-white px-6 py-3 border-b border-gray-200">
+        <View className="flex-row space-x-2">
           <TouchableOpacity
-            className={`px-4 py-2 rounded-full ${filter === 'all' ? 'bg-primary-900' : 'bg-gray-100'}`}
+            className={`px-3 py-1 rounded-full ${filter === 'all' ? 'bg-primary-900' : 'bg-gray-100'}`}
             onPress={() => setFilter('all')}
           >
-            <Text className={`font-medium ${filter === 'all' ? 'text-white' : 'text-gray-700'}`}>Tous</Text>
+            <Text className={`text-sm font-medium ${filter === 'all' ? 'text-white' : 'text-gray-700'}`}>Tous</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className={`px-4 py-2 rounded-full ${filter === 'en_attente' ? 'bg-yellow-500' : 'bg-gray-100'}`}
+            className={`px-3 py-1 rounded-full ${filter === 'en_attente' ? 'bg-yellow-500' : 'bg-gray-100'}`}
             onPress={() => setFilter('en_attente')}
           >
-            <Text className={`font-medium ${filter === 'en_attente' ? 'text-white' : 'text-gray-700'}`}>En attente</Text>
+            <Text className={`text-sm font-medium ${filter === 'en_attente' ? 'text-white' : 'text-gray-700'}`}>En attente</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className={`px-4 py-2 rounded-full ${filter === 'actif' ? 'bg-success-500' : 'bg-gray-100'}`}
+            className={`px-3 py-1 rounded-full ${filter === 'actif' ? 'bg-success-500' : 'bg-gray-100'}`}
             onPress={() => setFilter('actif')}
           >
-            <Text className={`font-medium ${filter === 'actif' ? 'text-white' : 'text-gray-700'}`}>Actifs</Text>
+            <Text className={`text-sm font-medium ${filter === 'actif' ? 'text-white' : 'text-gray-700'}`}>Actifs</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className={`px-4 py-2 rounded-full ${filter === 'inactif' ? 'bg-danger-500' : 'bg-gray-100'}`}
+            className={`px-3 py-1 rounded-full ${filter === 'inactif' ? 'bg-danger-500' : 'bg-gray-100'}`}
             onPress={() => setFilter('inactif')}
           >
-            <Text className={`font-medium ${filter === 'inactif' ? 'text-white' : 'text-gray-700'}`}>Inactifs</Text>
+            <Text className={`text-sm font-medium ${filter === 'inactif' ? 'text-white' : 'text-gray-700'}`}>Inactifs</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -533,7 +555,7 @@ export default function AdminAgentsScreen() {
         className="flex-1"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <View className="px-6 py-6">
+        <View className="px-6 py-4">
           {agents.length === 0 ? (
             <View className="bg-white rounded-xl p-8 items-center shadow-sm">
               <Ionicons name="people-outline" size={64} color="#9ca3af" />
@@ -543,59 +565,72 @@ export default function AdminAgentsScreen() {
               </Text>
             </View>
           ) : (
-            <View className="space-y-4">
+            <View className="space-y-3">
               {(agents.filter((a) =>
                 filter === 'all' ? true : (a.users?.statut === filter)
               )).map((agent) => (
-                <View key={agent.user_id} className="bg-white rounded-xl p-6 shadow-sm">
-                  <View className="flex-row items-start justify-between mb-4">
+                <View key={agent.user_id} className="bg-white rounded-xl p-4 shadow-sm">
+                  <View className="flex-row items-start justify-between mb-3">
                     <View className="flex-1">
-                      <View className="flex-row items-center">
-                      <Text className="text-lg font-semibold text-gray-900">{agent.users?.nom}</Text>
+                      <View className="flex-row items-center flex-wrap">
+                        <Text className="text-base font-semibold text-gray-900">{agent.users?.nom}</Text>
                         {agent.users?.role === 'admin' && (
                           <View className="ml-2 px-2 py-1 bg-purple-100 rounded-full">
                             <Text className="text-xs font-medium text-purple-800">
                               {(() => {
-                                // Check if this is the oldest admin
-                                const isOldestAdmin = agents
-                                  .filter(a => a.users?.role === 'admin')
-                                  .sort((a, b) => new Date(a.users?.created_at || 0).getTime() - new Date(b.users?.created_at || 0).getTime())[0]?.user_id === agent.user_id;
-                                return isOldestAdmin ? 'ADMIN PRINCIPAL' : 'ADMIN';
+                                // Check if this is the oldest admin using the same logic as revokeAdmin
+                                const adminAgents = agents.filter(a => a.users?.role === 'admin');
+                                if (adminAgents.length === 0) return 'ADMIN';
+                                
+                                // Sort by created_at, then by user_id as tiebreaker
+                                const sortedAdmins = adminAgents.sort((a, b) => {
+                                  const dateA = new Date(a.users?.created_at || 0).getTime();
+                                  const dateB = new Date(b.users?.created_at || 0).getTime();
+                                  
+                                  if (dateA !== dateB) {
+                                    return dateA - dateB;
+                                  }
+                                  
+                                  // If same date, sort by user_id
+                                  return (a.user_id || '').localeCompare(b.user_id || '');
+                                });
+                                
+                                const oldestAdmin = sortedAdmins[0];
+                                return oldestAdmin?.user_id === agent.user_id ? 'ADMIN PRINCIPAL' : 'ADMIN';
                               })()}
                             </Text>
                           </View>
                         )}
                       </View>
                       <Text className="text-gray-500 text-sm">{agent.users?.email}</Text>
-                      <View className="flex-row items-center mt-2">
-                        <Text className="text-gray-600 text-sm">Compte: </Text>
-                        <Text className={`text-sm font-medium ${getAccountStatusColor(agent.users?.statut)}`}>
-                          {agent.users?.statut === 'actif' ? 'Actif' : 'Inactif'}
-                        </Text>
-                        <Text className="text-gray-600 text-sm ml-3">Rôle: </Text>
-                        <Text className="text-sm font-medium text-gray-900">{agent.users?.role}</Text>
+                      <View className="flex-row items-center mt-1 flex-wrap">
+                        <View className="bg-success-100 px-2 py-1 rounded-full">
+                          <Text className="text-xs font-medium text-success-800">
+                            {agent.users?.statut === 'actif' ? 'Actif' : 'Inactif'}
+                          </Text>
+                        </View>
                       </View>
                     </View>
 
                     <View className="items-end">
-                      <View className={`px-3 py-1 rounded-full ${getStatusColor(agent.disponibilite)}`}>
-                        <Text className="text-sm font-medium">{getStatusText(agent.disponibilite)}</Text>
+                      <View className={`px-2 py-1 rounded-full ${getStatusColor(agent.disponibilite)}`}>
+                        <Text className="text-xs font-medium">{getStatusText(agent.disponibilite)}</Text>
                       </View>
                     </View>
                   </View>
 
-                  <View className="space-y-2 mb-4">
+                  <View className="space-y-1 mb-3">
                     <View className="flex-row items-center justify-between">
-                      <Text className="text-gray-600 text-sm">Zone assignée:</Text>
-                      <Text className="text-gray-900 font-medium">{agent.zone_assignee || 'Non assignée'}</Text>
+                      <Text className="text-gray-600 text-xs">Zone:</Text>
+                      <Text className="text-gray-900 font-medium text-xs">{agent.zone_assignee || 'Non assignée'}</Text>
                     </View>
                     <View className="flex-row items-center justify-between">
-                      <Text className="text-gray-600 text-sm">Heure d'arrivée:</Text>
-                      <Text className="text-gray-900 font-medium">{formatTime(agent.heure_arrivee)}</Text>
+                      <Text className="text-gray-600 text-xs">Arrivée:</Text>
+                      <Text className="text-gray-900 font-medium text-xs">{formatTime(agent.heure_arrivee)}</Text>
                     </View>
                     <View className="flex-row items-center justify-between">
-                      <Text className="text-gray-600 text-sm">Heure de départ:</Text>
-                      <Text className="text-gray-900 font-medium">{formatTime(agent.heure_depart)}</Text>
+                      <Text className="text-gray-600 text-xs">Départ:</Text>
+                      <Text className="text-gray-900 font-medium text-xs">{formatTime(agent.heure_depart)}</Text>
                     </View>
                   </View>
 
@@ -650,83 +685,101 @@ export default function AdminAgentsScreen() {
                     });
                     return agent.users?.statut === 'en_attente';
                   })() && (
-                    <View className="flex-row space-x-2 pt-4 border-t border-gray-100">
-                          <TouchableOpacity
-                        className={`flex-1 px-4 py-3 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-success-100'}`}
-                            disabled={offlineReadOnly}
-                            onPress={() => approveAgent(agent.users?.id)}
-                          >
-                        <Text className={`text-center font-medium ${offlineReadOnly ? 'text-gray-500' : 'text-success-700'}`}>Approuver</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                        className={`flex-1 px-4 py-3 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-danger-100'}`}
-                            disabled={offlineReadOnly}
-                            onPress={() => refuseAgent(agent.users?.id)}
-                          >
-                        <Text className={`text-center font-medium ${offlineReadOnly ? 'text-gray-500' : 'text-danger-700'}`}>Refuser</Text>
-                          </TouchableOpacity>
+                    <View className="flex-row space-x-2 mt-4">
+                      <TouchableOpacity
+                        className={`flex-1 bg-green-50 p-3 rounded-lg items-center ${offlineReadOnly ? 'opacity-50' : ''}`}
+                        disabled={offlineReadOnly}
+                        onPress={() => approveAgent(agent.users?.id)}
+                      >
+                        <Ionicons name="checkmark" size={16} color="#059669" />
+                        <Text className="text-green-700 font-medium text-sm mt-1">Approuver</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        className={`flex-1 bg-red-50 p-3 rounded-lg items-center ${offlineReadOnly ? 'opacity-50' : ''}`}
+                        disabled={offlineReadOnly}
+                        onPress={() => refuseAgent(agent.users?.id)}
+                      >
+                        <Ionicons name="close" size={16} color="#dc2626" />
+                        <Text className="text-red-700 font-medium text-sm mt-1">Refuser</Text>
+                      </TouchableOpacity>
                     </View>
                   )}
 
                   {/* Action buttons for active/inactive agents */}
                   {agent.users?.statut !== 'en_attente' && (
-                    <View className="pt-4 border-t border-gray-100">
-                      <View className="flex-row space-x-2 mb-2">
-                          <TouchableOpacity
-                          className={`flex-1 px-4 py-3 rounded-lg ${
+                    <View>
+                      <View className="flex-row space-x-2 mt-4">
+                        <TouchableOpacity
+                          className={`flex-1 p-3 rounded-lg items-center ${
+                            offlineReadOnly
+                              ? 'bg-gray-200'
+                              : agent.users?.statut === 'actif' ? 'bg-red-50' : 'bg-green-50'
+                          }`}
+                          disabled={offlineReadOnly}
+                          onPress={() => toggleAgentStatus(agent.users?.id, agent.users?.statut)}
+                        >
+                          <Ionicons 
+                            name={agent.users?.statut === 'actif' ? 'pause' : 'play'} 
+                            size={16} 
+                            color={offlineReadOnly ? '#9ca3af' : agent.users?.statut === 'actif' ? '#dc2626' : '#059669'} 
+                          />
+                          <Text
+                            className={`font-medium text-sm mt-1 ${
                               offlineReadOnly
-                                ? 'bg-gray-200'
-                                : agent.users?.statut === 'actif' ? 'bg-danger-100' : 'bg-success-100'
+                                ? 'text-gray-500'
+                                : agent.users?.statut === 'actif' ? 'text-red-700' : 'text-green-700'
                             }`}
-                            disabled={offlineReadOnly}
-                            onPress={() => toggleAgentStatus(agent.users?.id, agent.users?.statut)}
                           >
-                            <Text
-                            className={`text-center font-medium ${
-                                offlineReadOnly
-                                  ? 'text-gray-500'
-                                  : agent.users?.statut === 'actif' ? 'text-danger-700' : 'text-success-700'
-                              }`}
-                            >
-                              {agent.users?.statut === 'actif' ? 'Désactiver' : 'Activer'}
-                            </Text>
-                          </TouchableOpacity>
+                            {agent.users?.statut === 'actif' ? 'Désactiver' : 'Activer'}
+                          </Text>
+                        </TouchableOpacity>
 
-                          {agent.users?.role === 'admin' ? (
+                        {agent.users?.role === 'admin' ? (
+                          // Only show revoke button if this is not the current user (admin principal)
+                          userProfile?.id !== agent.users?.id ? (
                             <TouchableOpacity
-                            className={`flex-1 px-4 py-3 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-danger-100'}`}
+                              className={`flex-1 bg-orange-50 p-3 rounded-lg items-center ${offlineReadOnly ? 'opacity-50' : ''}`}
                               disabled={offlineReadOnly}
                               onPress={() => revokeAdmin(agent.users?.id)}
                             >
-                            <Text className="text-center font-medium text-danger-700">Retirer admin</Text>
+                              <Ionicons name="arrow-down" size={16} color="#ea580c" />
+                              <Text className="text-orange-700 font-medium text-sm mt-1">
+                                Rétrograder
+                              </Text>
                             </TouchableOpacity>
                           ) : (
-                            <TouchableOpacity
-                            className={`flex-1 px-4 py-3 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-primary-100'}`}
-                              disabled={offlineReadOnly}
-                              onPress={() => promoteToAdmin(agent.users?.id)}
-                            >
-                            <Text className="text-center font-medium text-primary-800">Promouvoir admin</Text>
-                            </TouchableOpacity>
-                          )}
+                            <View className="flex-1 bg-gray-100 p-3 rounded-lg items-center">
+                              <Ionicons name="shield" size={16} color="#6b7280" />
+                              <Text className="text-gray-500 font-medium text-sm mt-1">
+                                Admin principal
+                              </Text>
+                            </View>
+                          )
+                        ) : (
+                          <TouchableOpacity
+                            className={`flex-1 bg-primary-50 p-3 rounded-lg items-center ${offlineReadOnly ? 'opacity-50' : ''}`}
+                            disabled={offlineReadOnly}
+                            onPress={() => promoteToAdmin(agent.users?.id)}
+                          >
+                            <Ionicons name="arrow-up" size={16} color="#1e3a8a" />
+                            <Text className="text-primary-700 font-medium text-sm mt-1">
+                              Promouvoir admin
+                            </Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
 
-                          <TouchableOpacity
-                        className={`w-full px-4 py-3 rounded-lg ${offlineReadOnly ? 'bg-gray-200' : 'bg-warning-100'}`}
-                            disabled={offlineReadOnly}
-                            onPress={() => openAssignModal(agent.user_id)}
-                          >
-                        <Text className="text-center font-medium text-warning-800">Assigner client</Text>
-                          </TouchableOpacity>
+                      <TouchableOpacity
+                        className={`w-full bg-yellow-50 p-3 rounded-lg items-center mt-2 ${offlineReadOnly ? 'opacity-50' : ''}`}
+                        disabled={offlineReadOnly}
+                        onPress={() => openAssignModal(agent.user_id)}
+                      >
+                        <Ionicons name="person-add" size={16} color="#d97706" />
+                        <Text className="text-yellow-700 font-medium text-sm mt-1">Assigner client</Text>
+                      </TouchableOpacity>
                     </View>
-                      )}
+                  )}
 
-                  <View className="flex-row items-center pt-4 border-t border-gray-100">
-                    <View className="flex-row items-center">
-                      <Ionicons name="qr-code" size={16} color="#6b7280" />
-                      <Text className="text-gray-500 text-sm ml-2 font-mono">{agent.qr_code}</Text>
-                    </View>
-                  </View>
                 </View>
               ))}
             </View>

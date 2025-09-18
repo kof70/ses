@@ -151,30 +151,46 @@ export default function ClientDashboardScreen() {
       >
         {/* Header - style clair */}
         <View className="bg-white px-6 py-6 border-b border-gray-100">
-          <Text className="text-2xl font-bold text-gray-900">
-            Bonjour, {userProfile?.nom}
-          </Text>
-          <Text className="text-gray-500 mt-1">Espace client</Text>
+          <View className="flex-row items-center justify-between">
+            <View className="flex-1">
+              <Text className="text-2xl font-bold text-gray-900">
+                Bonjour, {userProfile?.nom}
+              </Text>
+              <Text className="text-gray-500 mt-1">Espace client</Text>
+            </View>
+            <View className="flex-row space-x-2">
+              <View className="bg-green-100 px-2 py-1 rounded-full">
+                <Text className="text-green-800 font-medium text-xs capitalize">
+                  {userProfile?.role}
+                </Text>
+              </View>
+              <View className="bg-success-100 px-2 py-1 rounded-full">
+                <Text className="text-success-800 font-medium text-xs capitalize">
+                  {userProfile?.statut}
+                </Text>
+              </View>
+            </View>
+          </View>
         </View>
 
         <View className="px-6 py-6 space-y-6">
           {/* Quick Stats - Optimisé */}
-          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <Text className="text-lg font-semibold text-gray-900 mb-4">
+          <View className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <Text className="text-base font-semibold text-gray-900 mb-3">
               Statistiques
             </Text>
-            <View className="flex-row justify-between space-x-4">
+            <View className="flex-row justify-between space-x-2">
               <View className="flex-1 items-center bg-blue-50 rounded-lg p-3">
-                <Text className="text-2xl font-bold text-primary-900">
+                <Text className="text-xl font-bold text-primary-900">
                   {recentScans.length}
                 </Text>
-                <Text className="text-gray-600 text-sm font-medium">Scans effectués</Text>
+                <Text className="text-gray-600 text-xs font-medium">Scans</Text>
               </View>
               <View className="flex-1 items-center bg-green-50 rounded-lg p-3">
-                <Text className="text-2xl font-bold text-success-600">
+                <Text className="text-xl font-bold text-success-600">
                   {recentScans.filter(scan => scan.agent_status === 'disponible').length}
                 </Text>
-                <Text className="text-gray-600 text-sm font-medium">Agents disponibles</Text>
+                <Text className="text-gray-600 text-xs font-medium">Agents</Text>
               </View>
               <View className="flex-1 items-center bg-yellow-50 rounded-lg p-3">
                 <Text className="text-2xl font-bold text-warning-600">0</Text>

@@ -7,7 +7,10 @@ import { createStackNavigator } from '@react-navigation/stack';
 const Stack = createStackNavigator();
 
 const TestScreen = () => {
-  return <div testID="test-screen">Test Screen</div>;
+  const { View, Text } = require('react-native');
+  return React.createElement(View, { testID: "test-screen" }, [
+    React.createElement(Text, { key: "text" }, "Test Screen")
+  ]);
 };
 
 const TestNavigator = () => {

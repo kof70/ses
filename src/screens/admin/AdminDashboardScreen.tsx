@@ -52,10 +52,11 @@ export default function AdminDashboardScreen() {
         console.error('Error fetching agents:', agentsError);
       }
 
-      // Fetch clients count
+      // Fetch clients count - count users with role 'client' instead of clients table
       const { count: clientsCount, error: clientsError } = await supabase
-        .from('clients')
-        .select('*', { count: 'exact', head: true });
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'client');
 
       if (clientsError) {
         console.error('Error fetching clients count:', clientsError);
@@ -132,7 +133,9 @@ export default function AdminDashboardScreen() {
           last_longitude,
           last_position_at,
           users:users!clients_user_id_fkey (
-            nom
+            nom,
+            email,
+            statut
           )
         `)
         .eq('users.statut', 'actif');
@@ -142,6 +145,8 @@ export default function AdminDashboardScreen() {
         return;
       }
 
+      console.log('🔍 Dashboard: Agents data:', agentsData);
+      console.log('🔍 Dashboard: Clients data:', clientsData);
       setAgents(agentsData || []);
       setClients(clientsData || []);
     } catch (error) {
@@ -398,32 +403,32 @@ export default function AdminDashboardScreen() {
           {/* Stats Grid - Optimisée avec espacement */}
           <View className="space-y-6">
             {/* Première ligne - Agents et Clients */}
-            <View className="flex-row space-x-6">
-              <View className="flex-1 bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <View className="flex-row space-x-3">
+              <View className="flex-1 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <View className="flex-row items-center justify-between mb-2">
                   <View className="bg-blue-50 p-2 rounded-lg">
-                    <Ionicons name="people" size={20} color="#3b82f6" />
+                    <Ionicons name="people" size={18} color="#3b82f6" />
                   </View>
-                  <Text className="text-2xl font-bold text-gray-900">
+                  <Text className="text-xl font-bold text-gray-900">
                     {stats.totalAgents}
                   </Text>
                 </View>
-                <Text className="text-gray-600 text-sm font-medium">Agents total</Text>
+                <Text className="text-gray-600 text-xs font-medium">Agents</Text>
                 <Text className="text-success-600 text-xs mt-1 font-medium">
                   {stats.activeAgents} actifs
                 </Text>
               </View>
 
-              <View className="flex-1 bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+              <View className="flex-1 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <View className="flex-row items-center justify-between mb-2">
                   <View className="bg-green-50 p-2 rounded-lg">
-                    <Ionicons name="person" size={20} color="#10b981" />
+                    <Ionicons name="person" size={18} color="#10b981" />
                   </View>
-                  <Text className="text-2xl font-bold text-gray-900">
+                  <Text className="text-xl font-bold text-gray-900">
                     {stats.totalClients}
                   </Text>
                 </View>
-                <Text className="text-gray-600 text-sm font-medium">Clients</Text>
+                <Text className="text-gray-600 text-xs font-medium">Clients</Text>
                 <Text className="text-gray-400 text-xs mt-1">
                   Enregistrés
                 </Text>
@@ -431,32 +436,32 @@ export default function AdminDashboardScreen() {
             </View>
 
             {/* Deuxième ligne - SOS et Annonces */}
-            <View className="flex-row space-x-6">
-              <View className="flex-1 bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+            <View className="flex-row space-x-3">
+              <View className="flex-1 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <View className="flex-row items-center justify-between mb-2">
                   <View className="bg-red-50 p-2 rounded-lg">
-                    <Ionicons name="warning" size={20} color="#ef4444" />
+                    <Ionicons name="warning" size={18} color="#ef4444" />
                   </View>
-                  <Text className="text-2xl font-bold text-gray-900">
+                  <Text className="text-xl font-bold text-gray-900">
                     {stats.activeSOS}
                   </Text>
                 </View>
-                <Text className="text-gray-600 text-sm font-medium">SOS actifs</Text>
+                <Text className="text-gray-600 text-xs font-medium">SOS actifs</Text>
                 <Text className="text-red-500 text-xs mt-1 font-medium">
                   {stats.activeSOS > 0 ? 'Attention requise' : 'Aucun'}
                 </Text>
               </View>
 
-              <View className="flex-1 bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+              <View className="flex-1 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <View className="flex-row items-center justify-between mb-2">
                   <View className="bg-yellow-50 p-2 rounded-lg">
-                    <Ionicons name="megaphone" size={20} color="#f59e0b" />
+                    <Ionicons name="megaphone" size={18} color="#f59e0b" />
                   </View>
-                  <Text className="text-2xl font-bold text-gray-900">
+                  <Text className="text-xl font-bold text-gray-900">
                     {stats.totalAnnouncements}
                   </Text>
                 </View>
-                <Text className="text-gray-600 text-sm font-medium">Annonces</Text>
+                <Text className="text-gray-600 text-xs font-medium">Annonces</Text>
                 <Text className="text-gray-400 text-xs mt-1">
                   Publiées
                 </Text>
@@ -561,28 +566,28 @@ export default function AdminDashboardScreen() {
           </View>
 
           {/* System Status - Optimisé avec espacement */}
-          <View className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
-            <Text className="text-lg font-semibold text-gray-900 mb-4">
+          <View className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <Text className="text-base font-semibold text-gray-900 mb-3">
               État du système
             </Text>
             
-            <View className="flex-row justify-between space-x-4">
-              <View className="flex-1 items-center bg-gray-50 rounded-lg p-3">
-                <View className="w-3 h-3 bg-success-500 rounded-full mb-2" />
-                <Text className="text-gray-700 text-sm font-medium">Serveur</Text>
-                <Text className="text-success-600 text-xs font-medium">Opérationnel</Text>
+            <View className="flex-row justify-between space-x-2">
+              <View className="flex-1 items-center bg-gray-50 rounded-lg p-2">
+                <View className="w-2 h-2 bg-success-500 rounded-full mb-1" />
+                <Text className="text-gray-700 text-xs font-medium">Serveur</Text>
+                <Text className="text-success-600 text-xs font-medium">OK</Text>
               </View>
               
-              <View className="flex-1 items-center bg-gray-50 rounded-lg p-3">
-                <View className="w-3 h-3 bg-success-500 rounded-full mb-2" />
-                <Text className="text-gray-700 text-sm font-medium">Base de données</Text>
-                <Text className="text-success-600 text-xs font-medium">Opérationnelle</Text>
+              <View className="flex-1 items-center bg-gray-50 rounded-lg p-2">
+                <View className="w-2 h-2 bg-success-500 rounded-full mb-1" />
+                <Text className="text-gray-700 text-xs font-medium">Base</Text>
+                <Text className="text-success-600 text-xs font-medium">OK</Text>
               </View>
               
-              <View className="flex-1 items-center bg-gray-50 rounded-lg p-3">
-                <View className="w-3 h-3 bg-success-500 rounded-full mb-2" />
-                <Text className="text-gray-700 text-sm font-medium">Notifications</Text>
-                <Text className="text-success-600 text-xs font-medium">Actives</Text>
+              <View className="flex-1 items-center bg-gray-50 rounded-lg p-2">
+                <View className="w-2 h-2 bg-success-500 rounded-full mb-1" />
+                <Text className="text-gray-700 text-xs font-medium">Notifs</Text>
+                <Text className="text-success-600 text-xs font-medium">OK</Text>
               </View>
             </View>
           </View>
@@ -649,7 +654,7 @@ export default function AdminDashboardScreen() {
                       .map((client) => (
                       <Picker.Item
                         key={client.user_id}
-                        label={`${client.users?.nom || 'Sans nom'}${client.last_latitude ? ' (Position connue)' : ' (Pas de position)'}`}
+                        label={`${client.users?.nom || client.users?.email || 'Client sans nom'}${client.last_latitude ? ' (Position connue)' : ' (Pas de position)'}`}
                         value={client.user_id}
                       />
                     ))}
@@ -666,7 +671,7 @@ export default function AdminDashboardScreen() {
                     return (
                       <View>
                         <Text className="text-gray-600">
-                          Nom: {client?.users?.nom}
+                          Nom: {client?.users?.nom || client?.users?.email || 'Non renseigné'}
                         </Text>
                         {client?.last_latitude && client?.last_longitude ? (
                           <Text className="text-gray-600">
