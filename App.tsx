@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
-import './global.css'; // NativeWind styles restored
 import 'react-native-url-polyfill/auto';
+import './global.css'; // NativeWind styles restored
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
